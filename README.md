@@ -75,5 +75,3 @@ This will create a commit like:
 ```bash
 git commit -m "feat: Add user registration page"
 ```
-
-## Happy Coding!
