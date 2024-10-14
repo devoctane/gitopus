@@ -3,9 +3,6 @@
 import inquirer from "inquirer";
 import { exec } from "child_process";
 import prefixes from "./data/prefixes.js";
-// import util from "util";
-
-// const execPromise = util.promisify(exec);
 
 async function selectPrefix() {
     const choices = prefixes.map((prefix) => ({
@@ -78,19 +75,21 @@ async function gitCommitWithPrefix(prefix) {
         return false;
     }
 
-    try {
-        const { stdout, stderr } = await exec(`git commit -m "${fullCommitMessage}"`);
-        if (stderr) {
-            console.error(`Error: ${stderr}`);
-            return false;
-        } else {
-            console.log(stdout);
-            return true;
-        }
-    } catch (error) {
-        console.error(`Error executing commit: ${error.message}`);
-        return false;
-    }
+    // Execute the commit command using a promise-based approach
+    return new Promise((resolve, reject) => {
+        exec(`git commit -m "${fullCommitMessage}"`, (error, stdout, stderr) => {
+            if (error) {
+                console.error(`Error executing commit: ${error.message}`);
+                reject(error);
+            } else if (stderr) {
+                console.error(`Error: ${stderr}`);
+                resolve(false);
+            } else {
+                console.log(stdout);
+                resolve(true);
+            }
+        });
+    });
 }
 
 async function main() {
