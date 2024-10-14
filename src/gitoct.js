@@ -2,8 +2,10 @@
 
 import inquirer from "inquirer";
 import { exec } from "child_process";
-import ora from "ora"; // Importing ora
 import prefixes from "./data/prefixes.js";
+import util from "util";
+
+const execPromise = util.promisify(exec);
 
 async function selectPrefix() {
     const choices = prefixes.map((prefix) => ({
@@ -76,21 +78,16 @@ async function gitCommitWithPrefix(prefix) {
         return;
     }
 
-    const spinner = ora("Committing...").start();
-
-    exec(`git commit -m "${fullCommitMessage}"`, (error, stdout, stderr) => {
-        spinner.stop();
-
-        if (error) {
-            console.error(`Error executing commit: ${error.message}`);
-            return;
-        }
+    try {
+        const { stdout, stderr } = await execPromise(`git commit -m "${fullCommitMessage}"`);
         if (stderr) {
             console.error(`Error: ${stderr}`);
-            return;
+        } else {
+            console.log(stdout);
         }
-        console.log(stdout);
-    });
+    } catch (error) {
+        console.error(`Error executing commit: ${error.message}`);
+    }
 }
 
 async function main() {
