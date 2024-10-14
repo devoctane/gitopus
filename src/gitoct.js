@@ -102,8 +102,9 @@ async function main() {
     let prefixToCommit;
     if (selectedPrefix === "custom") {
         const customPrefix = await addCustomPrefix();
-        prefixToCommit = customPrefix.name;
+        prefixToCommit   = customPrefix.name;
     } else {
+        
         prefixToCommit = selectedPrefix;
     }
 
