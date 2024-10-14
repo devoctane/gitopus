@@ -75,7 +75,7 @@ async function gitCommitWithPrefix(prefix) {
 
     if (!confirmCommit) {
         console.warn("\x1b[1;33m Operation was terminated!\x1b[0m");
-        return;
+        return false;
     }
 
     try {
@@ -85,28 +85,33 @@ async function gitCommitWithPrefix(prefix) {
         } else {
             console.log(stdout);
         }
+        return true;
     } catch (error) {
         console.error(`Error executing commit: ${error.message}`);
+        return false;
     }
 }
 
 async function main() {
-    while (true) {
-        const selectedPrefix = await selectPrefix();
-        if (selectedPrefix === null) {
-            console.warn("\x1b[1;10m Operation was terminated!\x1b[0m");
-            break;
-        }
+    const selectedPrefix = await selectPrefix();
+    if (selectedPrefix === null) {
+        console.warn("\x1b[1;10m Operation was terminated!\x1b[0m");
+        return;
+    }
 
-        let prefixToCommit;
-        if (selectedPrefix === "custom") {
-            const customPrefix = await addCustomPrefix();
-            prefixToCommit = customPrefix.name;
-        } else {
-            prefixToCommit = selectedPrefix;
-        }
+    let prefixToCommit;
+    if (selectedPrefix === "custom") {
+        const customPrefix = await addCustomPrefix();
+        prefixToCommit = customPrefix.name;
+    } else {
+        prefixToCommit = selectedPrefix;
+    }
 
-        await gitCommitWithPrefix(prefixToCommit);
+    const commitSuccessful = await gitCommitWithPrefix(prefixToCommit);
+    if (commitSuccessful) {
+        console.log("\x1b[32mCommitted successfully!\x1b[0m");
+    } else {
+        console.warn("\x1b[31mCommit failed or was canceled!\x1b[0m");
     }
 }
 
