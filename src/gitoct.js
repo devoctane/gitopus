@@ -3,9 +3,9 @@
 import inquirer from "inquirer";
 import { exec } from "child_process";
 import prefixes from "./data/prefixes.js";
-import util from "util";
+// import util from "util";
 
-const execPromise = util.promisify(exec);
+// const execPromise = util.promisify(exec);
 
 async function selectPrefix() {
     const choices = prefixes.map((prefix) => ({
@@ -79,7 +79,7 @@ async function gitCommitWithPrefix(prefix) {
     }
 
     try {
-        const { stdout, stderr } = await execPromise(`git commit -m "${fullCommitMessage}"`);
+        const { stdout, stderr } = await exec(`git commit -m "${fullCommitMessage}"`);
         if (stderr) {
             console.error(`Error: ${stderr}`);
             return false;
