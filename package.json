@@ -3,6 +3,7 @@
     "version": "1.0.1",
     "main": "src/gitoct.js",
     "scripts": {
+        "dev": "node  src/gitoct.js",
         "test": "echo \"Error: no test specified\" && exit 1"
     },
     "bin": {
