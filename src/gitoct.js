@@ -10,6 +10,7 @@ async function selectPrefix() {
         value: prefix.name,
     }));
 
+    choices.push({ name: "Add a custom prefix", value: "custom" });
     choices.push({ name: "Exit", value: null });
 
     const answer = await inquirer.prompt([
@@ -22,6 +23,26 @@ async function selectPrefix() {
     ]);
 
     return answer.prefix;
+}
+
+async function addCustomPrefix() {
+    const { customPrefixName, customPrefixDescription } = await inquirer.prompt([
+        {
+            type: "input",
+            name: "customPrefixName",
+            message: "Enter the custom prefix name:",
+        },
+        {
+            type: "input",
+            name: "customPrefixDescription",
+            message: "Enter a description for the custom prefix:",
+        },
+    ]);
+
+    return {
+        name: customPrefixName,
+        description: customPrefixDescription,
+    };
 }
 
 async function gitCommitWithPrefix(prefix) {
@@ -63,6 +84,7 @@ async function gitCommitWithPrefix(prefix) {
             console.error(`Error: ${stderr}`);
             return;
         }
+        console.log(stdout);
     });
 }
 
@@ -73,7 +95,16 @@ async function main() {
             console.warn("\x1b[1;10m Operation was terminated!\x1b[0m");
             break;
         }
-        await gitCommitWithPrefix(selectedPrefix);
+
+        let prefixToCommit;
+        if (selectedPrefix === "custom") {
+            const customPrefix = await addCustomPrefix();
+            prefixToCommit = customPrefix.name;
+        } else {
+            prefixToCommit = selectedPrefix;
+        }
+
+        await gitCommitWithPrefix(prefixToCommit);
     }
 }
 
