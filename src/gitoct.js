@@ -2,6 +2,7 @@
 
 import inquirer from "inquirer";
 import { exec } from "child_process";
+import ora from "ora"; // Importing ora
 import prefixes from "./data/prefixes.js";
 
 async function selectPrefix() {
@@ -75,7 +76,11 @@ async function gitCommitWithPrefix(prefix) {
         return;
     }
 
+    const spinner = ora("Committing...").start();
+
     exec(`git commit -m "${fullCommitMessage}"`, (error, stdout, stderr) => {
+        spinner.stop();
+
         if (error) {
             console.error(`Error executing commit: ${error.message}`);
             return;
