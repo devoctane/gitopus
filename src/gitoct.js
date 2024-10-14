@@ -3,9 +3,6 @@
 import inquirer from "inquirer";
 import { exec } from "child_process";
 import prefixes from "./data/prefixes.js";
-import util from "util";
-
-const execPromise = util.promisify(exec);
 
 async function selectPrefix() {
     const choices = prefixes.map((prefix) => ({
@@ -75,49 +72,42 @@ async function gitCommitWithPrefix(prefix) {
 
     if (!confirmCommit) {
         console.warn("\x1b[1;33m Operation was terminated!\x1b[0m");
-        return false;
-    }
-
-    try {
-        const { stdout, stderr } = await execPromise(`git commit -m "${fullCommitMessage}"`);
-        if (stderr) {
-            console.error(`Error: ${stderr}`);
-        } else {
-            console.log(stdout);
-        }
-        return true;
-    } catch (error) {
-        console.error(`Error executing commit: ${error.message}`);
-        return false;
-    }
-}
-
-async function main() {
-    const selectedPrefix = await selectPrefix();
-    if (selectedPrefix === null) {
-        console.warn("\x1b[1;10m Operation was terminated!\x1b[0m");
         return;
     }
 
-    let prefixToCommit;
-    if (selectedPrefix === "custom") {
-        const customPrefix = await addCustomPrefix();
-        prefixToCommit = customPrefix.name;
-    } else {
-        prefixToCommit = selectedPrefix;
-    }
+    exec(`git commit -m "${fullCommitMessage}"`, (error, stdout, stderr) => {
+        if (error) {
+            console.error(`Error executing commit: ${error.message}`);
+            return;
+        }
+        if (stderr) {
+            console.error(`Error: ${stderr}`);
+            return;
+        }
+        console.log(stdout);
+    });
+}
 
-    const commitSuccessful = await gitCommitWithPrefix(prefixToCommit);
-    if (commitSuccessful) {
-        console.log("\x1b[32mCommitted successfully!\x1b[0m");
-        process.exit(0);
-    } else {
-        console.warn("\x1b[31mCommit failed or was canceled!\x1b[0m");
-        process.exit(1);
+async function main() {
+    while (true) {
+        const selectedPrefix = await selectPrefix();
+        if (selectedPrefix === null) {
+            console.warn("\x1b[1;10m Operation was terminated!\x1b[0m");
+            break;
+        }
+
+        let prefixToCommit;
+        if (selectedPrefix === "custom") {
+            const customPrefix = await addCustomPrefix();
+            prefixToCommit = customPrefix.name;
+        } else {
+            prefixToCommit = selectedPrefix;
+        }
+
+        await gitCommitWithPrefix(prefixToCommit);
     }
 }
 
 main().catch((error) => {
     console.error("Error:", error);
-    process.exit(1);
 });
