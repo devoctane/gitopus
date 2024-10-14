@@ -59,7 +59,7 @@ async function gitCommitWithPrefix(prefix) {
 
     if (commitMessage.length < 10) {
         console.warn("\x1b[1;33m Commit message must be at least 10 characters long. \x1b[0m");
-        return false; // Return false if the message is too short
+        return false;
     }
 
     const fullCommitMessage = `${prefix}: ${commitMessage}`;
@@ -75,17 +75,17 @@ async function gitCommitWithPrefix(prefix) {
 
     if (!confirmCommit) {
         console.warn("\x1b[1;33m Operation was terminated!\x1b[0m");
-        return false; // Return false if the user cancels the commit
+        return false;
     }
 
     try {
         const { stdout, stderr } = await execPromise(`git commit -m "${fullCommitMessage}"`);
         if (stderr) {
             console.error(`Error: ${stderr}`);
-            return false; // Return false if there's an error in the commit process
+            return false;
         } else {
             console.log(stdout);
-            return true; // Return true if the commit was successful
+            return true;
         }
     } catch (error) {
         console.error(`Error executing commit: ${error.message}`);
@@ -111,16 +111,14 @@ async function main() {
     const commitSuccessful = await gitCommitWithPrefix(prefixToCommit);
     if (commitSuccessful) {
         console.log("\x1b[32mCommitted successfully!\x1b[0m");
-        // Exit the process after a successful commit to prevent re-showing the menu
         process.exit(0);
     } else {
         console.warn("\x1b[31mCommit failed or was canceled!\x1b[0m");
-        // If the commit fails or is canceled, the program will return to the prefix selection menu
-        await main(); // Re-invoke main to restart the process
+        await main();
     }
 }
 
 main().catch((error) => {
     console.error("Error:", error);
-    process.exit(1); // Exit with error code on failure
+    process.exit(1);
 });
