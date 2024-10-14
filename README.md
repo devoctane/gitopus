@@ -1,3 +1,5 @@
+# GitOct
+
 ![GitOct Logo](https://octane-spaces.blr1.cdn.digitaloceanspaces.com/gitoct/images/gitoct.png)
 
 ### **Gitoct** is a command-line tool that simplifies your Git commit process by providing an interactive interface for selecting conventional commit prefixes.

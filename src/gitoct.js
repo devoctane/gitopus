@@ -4,7 +4,7 @@ import inquirer from "inquirer";
 import { exec } from "child_process";
 
 const prefixes = [
-    { name: "init", description: "Initialized a new project or others" },
+    { name: "init", description: "Initiated a new project" },
     { name: "feat", description: "A new feature or functionality" },
     { name: "fix", description: "A bug fix" },
     { name: "docs", description: "Documentation-only changes" },
@@ -61,7 +61,6 @@ async function gitCommitWithPrefix(prefix) {
             console.error(`Error: ${stderr}`);
             return;
         }
-        console.log(`Commit successful: ${stdout}`);
     });
 }
 
