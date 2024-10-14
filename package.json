@@ -1,0 +1,19 @@
+{
+    "name": "gitoct",
+    "version": "1.0.0",
+    "main": "src/gitoct.js",
+    "scripts": {
+        "test": "echo \"Error: no test specified\" && exit 1"
+    },
+    "type": "module",
+    "keywords": [
+        "git commit",
+        "git utility tools"
+    ],
+    "author": "Octane Innovations",
+    "license": "ISC",
+    "description": "A command-line tool that simplifies your Git commit process by providing an interactive interface for selecting conventional commit prefixes.",
+    "dependencies": {
+        "inquirer": "^12.0.0"
+    }
+}
