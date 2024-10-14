@@ -75,3 +75,5 @@ This will create a commit like:
 ```bash
 git commit -m "feat: Add user registration page"
 ```
+
+For more information or to contribute, please visit the [OctaneAuth GitHub repository](https://github.com/devoctane/gitoct).

@@ -1,6 +1,6 @@
 {
     "name": "gitoct",
-    "version": "1.0.1",
+    "version": "1.0.3",
     "main": "src/gitoct.js",
     "scripts": {
         "dev": "node  src/gitoct.js",
