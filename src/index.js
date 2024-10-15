@@ -140,6 +140,10 @@ async function executeGitCommand(action) {
                 resolve(false);
             } else {
                 console.log(stdout);
+                if (action === "push") {
+                    console.log("\x1b[32mPushing done!\x1b[0m"); // Show "Pushing done" after a successful push
+                    process.exit(0); // Exit after successful push
+                }
                 resolve(true);
             }
         });
