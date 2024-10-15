@@ -135,8 +135,9 @@ async function executeGitCommand(command) {
                     console.error(`Error executing ${command}: ${error.message}`);
                     reject(error);
                 } else if (stderr) {
-                    console.error(`Git error: ${stderr}`);
+                    console.log(`${stderr}`);
                     resolve(false);
+                    process.exit(1);
                 } else {
                     console.log(stdout);
                     resolve(true);
