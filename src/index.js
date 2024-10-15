@@ -112,7 +112,7 @@ async function executeGitCommand(command) {
                 reject(error);
             } else if (stderr) {
                 console.log(stderr);
-                resolve(false);
+                resolve(true);
             } else {
                 console.log(stdout);
                 resolve(true);
