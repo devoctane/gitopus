@@ -75,7 +75,6 @@ async function gitCommitWithPrefix(prefix) {
         return false;
     }
 
-    // Execute the commit command using a promise-based approach
     return new Promise((resolve, reject) => {
         exec(`git commit -m "${fullCommitMessage}"`, (error, stdout, stderr) => {
             if (error) {
@@ -109,7 +108,7 @@ async function main() {
 
     const commitSuccessful = await gitCommitWithPrefix(prefixToCommit);
     if (commitSuccessful) {
-        console.log("\x1b[32mCommitted successfully!\x1b[0m");
+        console.log("\x1b[3 mCommitted successfully!\x1b[0m");
         process.exit(0);
     } else {
         console.warn("\x1b[31mCommit failed or was canceled!\x1b[0m");

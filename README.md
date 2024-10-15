@@ -1,8 +1,8 @@
-# GitOct
+# Gitopus
 
-![GitOct Logo](https://octane-spaces.blr1.cdn.digitaloceanspaces.com/gitoct/images/gitoct.png)
+![Gitopus Logo](https://octane-spaces.blr1.cdn.digitaloceanspaces.com/gitoct/images/gitoct.png)
 
-### **Gitoct** is a command-line tool that simplifies your Git commit process by providing an interactive interface for selecting conventional commit prefixes.
+### **Gitopus** is a command-line tool that simplifies your Git commit process by providing an interactive interface for selecting conventional commit prefixes.
 
 ## Features
 
@@ -13,14 +13,14 @@
 
 ## Installation
 
-To install **gitoct**, you need to have Node.js and npm (Node Package Manager) installed on your machine.
+To install **gitopus**, you need to have Node.js and npm (Node Package Manager) installed on your machine.
 
 1. **Install Node.js**: If you haven't already, download and install Node.js from [nodejs.org](https://nodejs.org/).
 
-2. **Install gitoct globally**: Open your terminal or command prompt and run the following command:
+2. **Install gitopus globally**: Open your terminal or command prompt and run the following command:
 
     ```bash
-    npm install -g gitoct
+    npm install -g gitopus
     ```
 
 ## Usage
@@ -36,7 +36,19 @@ Once **gitoct** is installed, you can use it to create Git commit messages **aft
 2. Run the `gitoct` command:
 
     ```bash
+    gitopus
+    ```
+
+    or
+
+    ```bash
     gitoct
+    ```
+
+    or
+
+    ```bash
+    gt
     ```
 
 3. You will see an interactive menu with available commit prefixes. Use the arrow keys to select a prefix and press Enter.
@@ -47,12 +59,12 @@ Once **gitoct** is installed, you can use it to create Git commit messages **aft
 
 ## Example
 
-Here's an example of how to use **gitoct**:
+Here's an example of how to use **gitopus**:
 
 ```bash
 cd /path/to/your/repo
 git add .       # Stage your changes first
-gitoct          # Run the gitoct command
+gt          # Run the gitopus command
 ```
 
 -   **Select a prefix**:
@@ -76,4 +88,4 @@ This will create a commit like:
 git commit -m "feat: Add user registration page"
 ```
 
-For more information or to contribute, please visit the [OctaneAuth GitHub repository](https://github.com/devoctane/gitoct).
+For more information or to contribute, please visit the [Gitopus GitHub repository](https://github.com/devoctane/gutopus).

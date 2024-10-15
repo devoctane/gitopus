@@ -1,13 +1,15 @@
 {
-    "name": "gitoct",
-    "version": "1.0.5",
-    "main": "src/gitoct.js",
+    "name": "gitopus",
+    "version": "1.0.4",
+    "main": "src/index.js",
     "scripts": {
-        "dev": "node  src/gitoct.js",
+        "dev": "node  src/index.js",
         "test": "echo \"Error: no test specified\" && exit 1"
     },
     "bin": {
-        "gitoct": "./src/gitoct.js"
+        "gitoct": "./src/index.js",
+        "gitopus": "./src/index.js",
+        "gt": "./src/index.js"
     },
     "type": "module",
     "keywords": [
