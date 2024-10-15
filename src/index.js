@@ -165,8 +165,6 @@ async function main() {
         prefixToCommit = selectedPrefix;
     }
 
-
-    
     const commitSuccessful = await gitCommitWithPrefix(prefixToCommit);
     if (commitSuccessful) {
         console.log("\x1b[32mCommitted successfully!\x1b[0m");
