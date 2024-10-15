@@ -1,6 +1,8 @@
 # Gitopus
 
-![Gitopus Logo](https://octane-spaces.blr1.cdn.digitaloceanspaces.com/gitoct/images/gitoct.png)
+<!-- ![Gitopus Logo](https://octane-spaces.blr1.cdn.digitaloceanspaces.com/gitoct/images/gitoct.png) -->
+
+![Gitopus Logo](https://octane-spaces.blr1.cdn.digitaloceanspaces.com/gitopus/images/gitopus.png)
 
 ### **Gitopus** is a command-line tool that simplifies your Git commit process by providing an interactive interface for selecting conventional commit prefixes.
 
@@ -25,7 +27,7 @@ To install **gitopus**, you need to have Node.js and npm (Node Package Manager) 
 
 ## Usage
 
-Once **gitoct** is installed, you can use it to create Git commit messages **after you have staged your changes with `git add`**:
+Once **gitopus** is installed, you can use it to create Git commit messages **after you have staged your changes with `git add`**:
 
 1. Stage your changes in the Git repository:
 
@@ -33,7 +35,7 @@ Once **gitoct** is installed, you can use it to create Git commit messages **aft
     git add .
     ```
 
-2. Run the `gitoct` command:
+2. Run the `gitopus` command:
 
     ```bash
     gitopus
