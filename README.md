@@ -90,4 +90,4 @@ This will create a commit like:
 git commit -m "feat: Add user registration page"
 ```
 
-For more information or to contribute, please visit the [Gitopus GitHub repository](https://github.com/devoctane/gutopus).
+For more information or to contribute, please visit the [Gitopus GitHub repository](https://github.com/devoctane/gitopus).
