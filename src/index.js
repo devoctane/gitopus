@@ -115,7 +115,7 @@ async function main() {
     if (commitSuccessful) {
         commitSuccessMenu(commitSuccessful);
         console.log("\x1b[3 mCommitted successfully!\x1b[0m");
-        process.exit(0);
+        // process.exit(0);
     } else {
         console.warn("\x1b[31mCommit failed or was canceled!\x1b[0m");
         await main();
