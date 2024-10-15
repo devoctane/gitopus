@@ -25,6 +25,7 @@
     },
     "homepage": "https://github.com/devoctane/gitopus#readme",
     "dependencies": {
+        "@huggingface/inference": "^2.8.1",
         "inquirer": "^12.0.0"
     }
 }
