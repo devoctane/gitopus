@@ -4,6 +4,9 @@ import inquirer from "inquirer";
 import { exec } from "child_process";
 import prefixes from "./data/prefixes.js";
 
+/**
+ * Selects the commit prefix from predefined options or allows a custom prefix.
+ */
 async function selectPrefix() {
     const choices = prefixes.map((prefix) => ({
         name: `${prefix.name}: ${prefix.description}`,
@@ -13,18 +16,19 @@ async function selectPrefix() {
     choices.push({ name: "Add a custom prefix", value: "custom" });
     choices.push({ name: "Exit", value: null });
 
-    const answer = await inquirer.prompt([
-        {
-            type: "list",
-            name: "prefix",
-            message: "Select the commit prefix:",
-            choices: choices,
-        },
-    ]);
+    const { prefix } = await inquirer.prompt({
+        type: "list",
+        name: "prefix",
+        message: "Select the commit prefix:",
+        choices: choices,
+    });
 
-    return answer.prefix;
+    return prefix;
 }
 
+/**
+ * Prompts the user to enter a custom prefix and description.
+ */
 async function addCustomPrefix() {
     const { customPrefixName, customPrefixDescription } = await inquirer.prompt([
         {
@@ -45,14 +49,15 @@ async function addCustomPrefix() {
     };
 }
 
+/**
+ * Performs the git commit operation with the selected prefix and message.
+ */
 async function gitCommitWithPrefix(prefix) {
-    const { commitMessage } = await inquirer.prompt([
-        {
-            type: "input",
-            name: "commitMessage",
-            message: "Enter the commit message:",
-        },
-    ]);
+    const { commitMessage } = await inquirer.prompt({
+        type: "input",
+        name: "commitMessage",
+        message: "Enter the commit message:",
+    });
 
     if (commitMessage.length < 10) {
         console.warn("\x1b[1;33m Commit message must be at least 10 characters long. \x1b[0m");
@@ -60,37 +65,24 @@ async function gitCommitWithPrefix(prefix) {
     }
 
     const fullCommitMessage = `${prefix}: ${commitMessage}`;
-
-    const { confirmCommit } = await inquirer.prompt([
-        {
-            type: "confirm",
-            name: "confirmCommit",
-            message: `Are you sure you want to commit with the message: "${fullCommitMessage}"?`,
-            default: false,
-        },
-    ]);
+    const { confirmCommit } = await inquirer.prompt({
+        type: "confirm",
+        name: "confirmCommit",
+        message: `Are you sure you want to commit with the message: "${fullCommitMessage}"?`,
+        default: false,
+    });
 
     if (!confirmCommit) {
         console.warn("\x1b[1;33m Operation was terminated!\x1b[0m");
         return false;
     }
 
-    return new Promise((resolve, reject) => {
-        exec(`git commit -m "${fullCommitMessage}"`, (error, stdout, stderr) => {
-            if (error) {
-                // console.error(`Error executing commit: ${error.message}`);
-                reject(error);
-            } else if (stderr) {
-                console.error(`Error: ${stderr}`);
-                resolve(false);
-            } else {
-                console.log(stdout);
-                resolve(true);
-            }
-        });
-    });
+    return executeGitCommand(`git commit -m "${fullCommitMessage}"`);
 }
 
+/**
+ * Displays the post-commit menu with options to push, check status, view logs, or exit.
+ */
 async function showPostCommitMenu() {
     const choices = [
         { name: "Push to remote (git push)", value: "push" },
@@ -99,89 +91,94 @@ async function showPostCommitMenu() {
         { name: "Exit", value: "exit" },
     ];
 
-    const { action } = await inquirer.prompt([
-        {
-            type: "list",
-            name: "action",
-            message: "What would you like to do next?",
-            choices: choices,
-        },
-    ]);
+    const { action } = await inquirer.prompt({
+        type: "list",
+        name: "action",
+        message: "What would you like to do next?",
+        choices: choices,
+    });
 
     return action;
 }
 
-async function executeGitCommand(action) {
-    let command;
-    switch (action) {
-        case "push":
-            command = "git push";
-            break;
-        case "status":
-            command = "git status";
-            break;
-        case "log":
-            command = "git log";
-            break;
-        case "exit":
-            console.log("\x1b[32mExiting...\x1b[0m");
-            process.exit(0);
-        default:
-            console.warn("\x1b[31mInvalid option\x1b[0m");
-            return false;
-    }
-
+/**
+ * Executes a given git command and logs the output.
+ */
+async function executeGitCommand(command) {
     return new Promise((resolve, reject) => {
         exec(command, (error, stdout, stderr) => {
             if (error) {
-                console.error(`Error executing ${command}: ${error.message}`);
+                console.log(`${command}: ${error.message}`);
                 reject(error);
             } else if (stderr) {
-                console.log(`Error: ${stderr}`);
+                console.log(stderr);
                 resolve(false);
-                process.exit(1);
             } else {
                 console.log(stdout);
-                if (action === "push") {
-                    console.log("\x1b[32mPushing done!\x1b[0m");
-                    process.exit(0);
-                }
                 resolve(true);
             }
         });
     });
 }
 
+/**
+ * Main function to handle the commit process and post-commit actions.
+ */
 async function main() {
-    const selectedPrefix = await selectPrefix();
-    if (selectedPrefix === null) {
-        console.warn("\x1b[1;10m Operation was terminated!\x1b[0m");
-        return;
-    }
+    try {
+        const selectedPrefix = await selectPrefix();
+        if (!selectedPrefix) {
+            console.warn("\x1b[1;10m Operation was terminated!\x1b[0m");
+            return;
+        }
 
-    let prefixToCommit;
-    if (selectedPrefix === "custom") {
-        const customPrefix = await addCustomPrefix();
-        prefixToCommit = customPrefix.name;
-    } else {
-        prefixToCommit = selectedPrefix;
-    }
+        const prefixToCommit = selectedPrefix === "custom" ? (await addCustomPrefix()).name : selectedPrefix;
 
-    const commitSuccessful = await gitCommitWithPrefix(prefixToCommit);
-    if (commitSuccessful) {
-        console.log("\x1b[32mCommitted successfully!\x1b[0m");
-        let postCommitAction;
-        do {
-            postCommitAction = await showPostCommitMenu();
-            await executeGitCommand(postCommitAction);
-        } while (postCommitAction !== "exit");
-    } else {
-        console.warn("\x1b[31mCommit failed or was canceled!\x1b[0m");
-        await main();
+        const commitSuccessful = await gitCommitWithPrefix(prefixToCommit);
+        if (commitSuccessful) {
+            console.log("\x1b[32mCommitted successfully!\x1b[0m");
+
+            let postCommitAction;
+            do {
+                postCommitAction = await showPostCommitMenu();
+                await handlePostCommitAction(postCommitAction);
+            } while (postCommitAction !== "exit");
+        } else {
+            console.warn("\x1b[31mCommit failed or was canceled!\x1b[0m");
+            await main(); // Re-run the main function if the commit fails or is canceled
+        }
+    } catch (error) {
+        console.error("Error:", error);
+        process.exit(1);
     }
 }
 
-main().catch((error) => {
-    console.error("Error:", error);
-    process.exit(1);
-});
+/**
+ * Handles post-commit actions like pushing, viewing status or logs.
+ */
+async function handlePostCommitAction(action) {
+    let command;
+    switch (action) {
+        case "push":
+            command = "git push";
+            await executeGitCommand(command);
+            console.log("\x1b[32mPushing done!\x1b[0m");
+            break;
+        case "status":
+            command = "git status";
+            await executeGitCommand(command);
+            break;
+        case "log":
+            command = "git log";
+            await executeGitCommand(command);
+            break;
+        case "exit":
+            console.log("\x1b[32mExiting...\x1b[0m");
+            break;
+        default:
+            console.warn("\x1b[31mInvalid option\x1b[0m");
+    }
+}
+
+// Start the program
+main();
