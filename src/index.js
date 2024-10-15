@@ -1,5 +1,4 @@
 #!/usr/bin/env node
-
 import inquirer from "inquirer";
 import { exec } from "child_process";
 import prefixes from "./data/prefixes.js";
