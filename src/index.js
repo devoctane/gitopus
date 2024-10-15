@@ -77,7 +77,7 @@ async function gitCommitWithPrefix(prefix) {
     return new Promise((resolve, reject) => {
         exec(`git commit -m "${fullCommitMessage}"`, (error, stdout, stderr) => {
             if (error) {
-                console.error(`Error executing commit: ${error.message}`);
+                // console.error(`Error executing commit: ${error.message}`);
                 reject(error);
             } else if (stderr) {
                 console.error(`Error: ${stderr}`);
