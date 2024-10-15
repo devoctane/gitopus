@@ -1,10 +1,10 @@
 {
     "name": "gitopus",
-    "version": "1.0.6",
+    "version": "1.0.7",
     "main": "src/index.js",
     "scripts": {
         "dev": "node  src/index.js",
-        "test": "echo \"Error: no test specified\" && exit 1"
+        "test": "node  src/test.js"
     },
     "bin": {
         "gitoct": "./src/index.js",
@@ -21,9 +21,9 @@
     "description": "A command-line tool that simplifies your Git commit process by providing an interactive interface for selecting conventional commit prefixes.",
     "repository": {
         "type": "git",
-        "url": "https://github.com/devoctane/gitoct.git"
+        "url": "https://github.com/devoctane/gitopus.git"
     },
-    "homepage": "https://github.com/devoctane/gitoct#readme",
+    "homepage": "https://github.com/devoctane/gitopus#readme",
     "dependencies": {
         "inquirer": "^12.0.0"
     }
