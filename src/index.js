@@ -91,9 +91,8 @@ async function gitCommitWithPrefix(prefix) {
     });
 }
 
-async function commitSuccessMenu(status) {
-    const res = await status;
-    console.log("commitSuccessMenu", res);
+function commitSuccessMenu() {
+    console.log("commitSuccessMenu");
 }
 
 async function main() {
@@ -113,7 +112,7 @@ async function main() {
 
     const commitSuccessful = await gitCommitWithPrefix(prefixToCommit);
     if (commitSuccessful) {
-        commitSuccessMenu(commitSuccessful);
+        commitSuccessMenu();
         console.log("\x1b[3 mCommitted successfully!\x1b[0m");
         // process.exit(0);
     } else {
