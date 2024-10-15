@@ -1,10 +1,8 @@
 # Gitopus
 
-<!-- ![Gitopus Logo](https://octane-spaces.blr1.cdn.digitaloceanspaces.com/gitoct/images/gitoct.png) -->
-
 ![Gitopus Logo](https://octane-spaces.blr1.cdn.digitaloceanspaces.com/gitopus/images/gitopus.png)
 
-### **Gitopus** is a command-line tool that simplifies your Git commit process by providing an interactive interface for selecting conventional commit prefixes.
+### **Gitopus** is an open-source command-line tool that simplifies your Git commit process by providing an interactive interface for selecting conventional commit prefixes.
 
 ## Features
 
@@ -66,7 +64,7 @@ Here's an example of how to use **gitopus**:
 ```bash
 cd /path/to/your/repo
 git add .       # Stage your changes first
-gt          # Run the gitopus command
+gt              # Run the gitopus command
 ```
 
 -   **Select a prefix**:
@@ -80,6 +78,7 @@ gt          # Run the gitopus command
     ```
 
 -   **Enter your commit message**:
+
     ```
     Enter the commit message: Add user registration page
     ```
@@ -90,4 +89,65 @@ This will create a commit like:
 git commit -m "feat: Add user registration page"
 ```
 
-For more information or to contribute, please visit the [Gitopus GitHub repository](https://github.com/devoctane/gitopus).
+## Contributing
+
+We welcome contributions to **Gitopus**! If you'd like to contribute, follow the steps below:
+
+### 1. Fork the repository
+
+Visit the [Gitopus GitHub repository](https://github.com/devoctane/gitopus) and click the **Fork** button to create your own copy of the repository.
+
+### 2. Clone the forked repository
+
+Clone the repository to your local machine using the following command:
+
+```bash
+git clone https://github.com/YOUR_GITHUB_USERNAME/gitopus.git
+```
+
+### 3. Create a new branch
+
+Create a new branch for your feature or bug fix:
+
+```bash
+git checkout -b feature-or-bug-fix-name
+```
+
+### 4. Make changes
+
+Make your changes and ensure everything is working correctly.
+
+### 5. Commit your changes
+
+After making changes, commit them using **Gitopus**:
+
+```bash
+git add .
+gt           # Run gitopus to commit with a prefix
+```
+
+Alternatively, commit manually:
+
+```bash
+git commit -m "feat: Add feature or bug fix"
+```
+
+### 6. Push to your fork
+
+Push your changes to your forked repository:
+
+```bash
+git push origin feature-or-bug-fix-name
+```
+
+### 7. Submit a pull request
+
+Go to the original **Gitopus** repository and submit a pull request with a description of your changes.
+
+---
+
+Thank you for contributing to **Gitopus**!
+
+For more information, check out the [Gitopus GitHub repository](https://github.com/devoctane/gitopus).
+
+Team Octane!
