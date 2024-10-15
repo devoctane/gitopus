@@ -91,8 +91,60 @@ async function gitCommitWithPrefix(prefix) {
     });
 }
 
-function commitSuccessMenu() {
-    console.log("commitSuccessMenu");
+async function showPostCommitMenu() {
+    const choices = [
+        { name: "Push to remote (git push)", value: "push" },
+        { name: "Check status (git status)", value: "status" },
+        { name: "View commit log (git log)", value: "log" },
+        { name: "Exit", value: "exit" },
+    ];
+
+    const { action } = await inquirer.prompt([
+        {
+            type: "list",
+            name: "action",
+            message: "What would you like to do next?",
+            choices: choices,
+        },
+    ]);
+
+    return action;
+}
+
+async function executeGitCommand(action) {
+    let command;
+    switch (action) {
+        case "push":
+            command = "git push";
+            break;
+        case "status":
+            command = "git status";
+            break;
+        case "log":
+            command = "git log";
+            break;
+        case "exit":
+            console.log("\x1b[32mExiting...\x1b[0m");
+            process.exit(0);
+        default:
+            console.warn("\x1b[31mInvalid option\x1b[0m");
+            return false;
+    }
+
+    return new Promise((resolve, reject) => {
+        exec(command, (error, stdout, stderr) => {
+            if (error) {
+                console.error(`Error executing ${command}: ${error.message}`);
+                reject(error);
+            } else if (stderr) {
+                console.error(`Error: ${stderr}`);
+                resolve(false);
+            } else {
+                console.log(stdout);
+                resolve(true);
+            }
+        });
+    });
 }
 
 async function main() {
@@ -112,9 +164,12 @@ async function main() {
 
     const commitSuccessful = await gitCommitWithPrefix(prefixToCommit);
     if (commitSuccessful) {
-        commitSuccessMenu();
-        console.log("\x1b[3 mCommitted successfully!\x1b[0m");
-        // process.exit(0);
+        console.log("\x1b[32mCommitted successfully!\x1b[0m");
+        let postCommitAction;
+        do {
+            postCommitAction = await showPostCommitMenu();
+            await executeGitCommand(postCommitAction);
+        } while (postCommitAction !== "exit");
     } else {
         console.warn("\x1b[31mCommit failed or was canceled!\x1b[0m");
         await main();
