@@ -136,13 +136,14 @@ async function executeGitCommand(action) {
                 console.error(`Error executing ${command}: ${error.message}`);
                 reject(error);
             } else if (stderr) {
-                console.error(`Error: ${stderr}`);
+                console.log(`Error: ${stderr}`);
                 resolve(false);
+                process.exit(1);
             } else {
                 console.log(stdout);
                 if (action === "push") {
-                    console.log("\x1b[32mPushing done!\x1b[0m"); // Show "Pushing done" after a successful push
-                    process.exit(0); // Exit after successful push
+                    console.log("\x1b[32mPushing done!\x1b[0m");
+                    process.exit(0);
                 }
                 resolve(true);
             }
