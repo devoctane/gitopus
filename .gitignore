@@ -1,3 +1,5 @@
 node_modules
 feats.txt
 .env
+
+src/test.js
