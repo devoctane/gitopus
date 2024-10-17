@@ -25,6 +25,7 @@
     },
     "homepage": "https://github.com/devoctane/gitopus#readme",
     "dependencies": {
+        "@google/generative-ai": "^0.21.0",
         "inquirer": "^12.0.0"
     }
 }
