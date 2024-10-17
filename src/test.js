@@ -4,14 +4,38 @@ import inquirer from "inquirer";
 import { exec } from "child_process";
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import prefixes from "./data/prefixes.js";
+import dotenv from "dotenv";
+
+dotenv.config();
 
 // Initialize Gemini AI
-const genAI = new GoogleGenerativeAI("AIzaSyDarxCSPMYCLve3l-m8nMF7bMqnFqk2tW4");
+const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
+
+/**
+ * Shows the initial menu with three options
+ */
+async function showInitialMenu() {
+    try {
+        const { choice } = await inquirer.prompt({
+            type: "list",
+            name: "choice",
+            message: "How would you like to create your commit message?",
+            choices: [
+                { name: "Generate commit message", value: "generate" },
+                { name: "Custom commit message", value: "manual" },
+                { name: "Exit", value: "exit" },
+            ],
+        });
+        return choice;
+    } catch (error) {
+        console.error("Error showing menu:", error.message);
+        process.exit(1);
+    }
+}
 
 /**
  * Gets the current git changes (diff) to analyze
  */
-
 async function getGitDiff() {
     try {
         return new Promise((resolve, reject) => {
@@ -49,254 +73,169 @@ async function predictCommitMessage(diff) {
         const result = await model.generateContent(prompt);
         const prediction = result.response.text().trim();
 
-        return prediction;
+        // Show the prediction to the user and ask for confirmation
+        const { useMessage } = await inquirer.prompt({
+            type: "confirm",
+            name: "useMessage",
+            message: `AI suggests: "${prediction}"\n\nWould you like to use this message?`,
+            default: true,
+        });
+
+        if (useMessage) {
+            return prediction;
+        } else {
+            return await getManualCommitMessage();
+        }
     } catch (error) {
         console.error("Error predicting commit message:", error.message);
-        return null;
+        return await getManualCommitMessage();
     }
 }
 
 /**
- * Selects the commit prefix from predefined options or allows a custom prefix.
+ * Gets a manual commit message from the user
  */
-async function selectPrefix(suggestedMessage = null) {
+async function getManualCommitMessage() {
     try {
-        const choices = prefixes.map((prefix) => ({
-            name: `${prefix.name}: ${prefix.description}`,
-            value: prefix.name,
-        }));
-
-        if (suggestedMessage) {
-            choices.unshift({
-                name: `Use AI suggestion: "${suggestedMessage}"`,
-                value: "ai_suggestion",
-            });
-        }
-
-        choices.push({ name: "Add a custom prefix", value: "custom" });
-        choices.push({ name: "Exit", value: null });
-
+        // First, select the prefix
         const { prefix } = await inquirer.prompt({
             type: "list",
             name: "prefix",
-            message: "Select the commit prefix:",
-            choices: choices,
+            message: "Select the commit type:",
+            choices: prefixes.map((p) => ({
+                name: `${p.name}: ${p.description}`,
+                value: p.name,
+            })),
         });
 
-        return prefix;
+        // Then get the commit message
+        const { message } = await inquirer.prompt({
+            type: "input",
+            name: "message",
+            message: "Enter the commit message:",
+            validate: (input) => {
+                if (input.length < 10) {
+                    return "Commit message must be at least 10 characters long.";
+                }
+                return true;
+            },
+        });
+
+        return `${prefix}: ${message}`;
     } catch (error) {
-        console.error("Error selecting prefix:", error.message);
+        console.error("Error getting manual commit message:", error.message);
         process.exit(1);
     }
 }
 
 /**
- * Prompts the user to enter a custom prefix and description.
+ * Executes a git command and returns the result
  */
-async function addCustomPrefix() {
-    try {
-        const { customPrefixName, customPrefixDescription } = await inquirer.prompt([
-            {
-                type: "input",
-                name: "customPrefixName",
-                message: "Enter the custom prefix name:",
-            },
-            {
-                type: "input",
-                name: "customPrefixDescription",
-                message: "Enter a description for the custom prefix:",
-            },
-        ]);
-
-        if (!customPrefixName || !customPrefixDescription) {
-            throw new Error("Custom prefix name or description cannot be empty.");
-        }
-
-        return {
-            name: customPrefixName,
-            description: customPrefixDescription,
-        };
-    } catch (error) {
-        console.error("Error adding custom prefix:", error.message);
-        process.exit(1);
-    }
-}
-
-/**
- * Performs the git commit operation with the selected prefix and message.
- */
-async function gitCommitWithPrefix(prefix, aiSuggestedMessage = null) {
-    try {
-        let commitMessage;
-
-        if (prefix === "ai_suggestion" && aiSuggestedMessage) {
-            commitMessage = aiSuggestedMessage;
-        } else {
-            const { message } = await inquirer.prompt({
-                type: "input",
-                name: "message",
-                message: "Enter the commit message:",
-                default: aiSuggestedMessage || "",
-            });
-
-            if (message.length < 10) {
-                throw new Error("Commit message must be at least 10 characters long.");
+async function executeGitCommand(command) {
+    return new Promise((resolve, reject) => {
+        exec(command, (error, stdout, stderr) => {
+            if (error) {
+                console.error(`Error executing ${command}: ${error.message}`);
+                reject(error);
+                return;
             }
-
-            commitMessage = `${prefix}: ${message}`;
-        }
-
-        const { confirmCommit } = await inquirer.prompt({
-            type: "confirm",
-            name: "confirmCommit",
-            message: `Are you sure you want to commit with the message: "${commitMessage}"?`,
-            default: false,
+            if (stderr) {
+                console.log(stderr);
+            }
+            if (stdout) {
+                console.log(stdout);
+            }
+            resolve(true);
         });
-
-        if (!confirmCommit) {
-            console.warn("\x1b[1;33m Operation was terminated!\x1b[0m");
-            return false;
-        }
-
-        return executeGitCommand(`git commit -m "${commitMessage}"`);
-    } catch (error) {
-        console.error("Error in git commit:", error.message);
-        return false;
-    }
+    });
 }
 
 /**
- * Displays the post-commit menu with options to push, check status, view logs, or exit.
+ * Shows the post-commit menu and handles the selected action
  */
-async function showPostCommitMenu() {
+async function handlePostCommit() {
     try {
-        const choices = [
-            { name: "Push to remote (git push)", value: "push" },
-            { name: "Check status (git status)", value: "status" },
-            { name: "View commit log (git log)", value: "log" },
-            { name: "Exit", value: "exit" },
-        ];
-
         const { action } = await inquirer.prompt({
             type: "list",
             name: "action",
             message: "What would you like to do next?",
-            choices: choices,
+            choices: [
+                { name: "Push changes", value: "push" },
+                { name: "View status", value: "status" },
+                { name: "View log", value: "log" },
+                { name: "Exit", value: "exit" },
+            ],
         });
 
-        return action;
+        switch (action) {
+            case "push":
+                await executeGitCommand("git push");
+                console.log("\x1b[32mChanges pushed successfully!\x1b[0m");
+                break;
+            case "status":
+                await executeGitCommand("git status");
+                await handlePostCommit();
+                break;
+            case "log":
+                await executeGitCommand("git log -1");
+                await handlePostCommit();
+                break;
+            case "exit":
+                console.error("Process terminated!");
+                break;
+        }
     } catch (error) {
-        console.error("Error displaying post-commit menu:", error.message);
+        console.error("Error in post-commit actions:", error.message);
         process.exit(1);
     }
 }
 
 /**
- * Executes a given git command and logs the output.
- */
-async function executeGitCommand(command) {
-    try {
-        return new Promise((resolve, reject) => {
-            exec(command, (error, stdout, stderr) => {
-                if (error) {
-                    console.error(`Error executing ${command}: ${error.message}`);
-                    reject(error);
-                } else if (stderr) {
-                    console.log(`${stderr}`);
-                    resolve(false);
-                    process.exit(1);
-                } else {
-                    console.log(stdout);
-                    resolve(true);
-                }
-            });
-        });
-    } catch (error) {
-        console.error(`Error in command execution: ${error.message}`);
-        process.exit(1);
-    }
-}
-
-/**
- * Main function to handle the commit process and post-commit actions.
+ * Main function that orchestrates the commit process
  */
 async function main() {
     try {
-        // Get git diff and predict commit message
+        // Check if there are staged changes
         const diff = await getGitDiff();
-        let aiSuggestedMessage = null;
-
-        if (diff) {
-            aiSuggestedMessage = await predictCommitMessage(diff);
-            if (aiSuggestedMessage) {
-                console.log("\x1b[36mAI Suggested Commit Message:\x1b[0m", aiSuggestedMessage);
-            }
-        }
-
-        const selectedPrefix = await selectPrefix(aiSuggestedMessage);
-        if (!selectedPrefix) {
-            console.warn("\x1b[1;33m Operation was terminated!\x1b[0m");
+        if (!diff) {
+            console.log("\x1b[33mNo staged changes found. Please stage your changes first using 'git add'.\x1b[0m");
             return;
         }
 
-        const prefixToCommit = selectedPrefix === "custom" ? (await addCustomPrefix()).name : selectedPrefix;
+        // Show the initial menu
+        const choice = await showInitialMenu();
 
-        const commitSuccessful = await gitCommitWithPrefix(
-            prefixToCommit,
-            selectedPrefix === "ai_suggestion" ? aiSuggestedMessage : null
-        );
-
-        if (commitSuccessful) {
-            console.log("\x1b[32mCommitted successfully!\x1b[0m");
-
-            let postCommitAction;
-            do {
-                postCommitAction = await showPostCommitMenu();
-                await handlePostCommitAction(postCommitAction);
-            } while (postCommitAction !== "exit");
-        } else {
-            console.warn("\x1b[31mCommit failed or was canceled!\x1b[0m");
-            await main(); // Re-run the main function if the commit fails or is canceled
+        // Handle exit choice
+        if (choice === "exit") {
+            console.error("Process terminated!");
+            return;
         }
+
+        // Get the commit message based on user's choice
+        const commitMessage = choice === "generate" ? await predictCommitMessage(diff) : await getManualCommitMessage();
+
+        // Confirm the commit
+        const { confirmCommit } = await inquirer.prompt({
+            type: "confirm",
+            name: "confirmCommit",
+            message: `Commit with message: "${commitMessage}"?`,
+            default: true,
+        });
+
+        if (!confirmCommit) {
+            console.log("\x1b[33mCommit cancelled.\x1b[0m");
+            return;
+        }
+
+        // Perform the commit
+        await executeGitCommand(`git commit -m "${commitMessage}"`);
+        console.log("\x1b[32mChanges committed successfully!\x1b[0m");
+
+        // Show post-commit options
+        await handlePostCommit();
     } catch (error) {
-        console.error("Error in main process:", error.message);
+        console.error("Error:", error.message);
         process.exit(1);
-    }
-}
-
-const test = () => {
-    console.log("Testing");
-};
-
-/**
- * Handles post-commit actions like pushing, viewing status, or logs.
- */
-async function handlePostCommitAction(action) {
-    try {
-        test();
-        let command;
-        switch (action) {
-            case "push":
-                command = "git push";
-                await executeGitCommand(command);
-                console.log("\x1b[32mPushing done!\x1b[0m");
-                break;
-            case "status":
-                command = "git status";
-                await executeGitCommand(command);
-                break;
-            case "log":
-                command = "git log";
-                await executeGitCommand(command);
-                break;
-            case "exit":
-                console.log("\x1b[32mExiting...\x1b[0m");
-                break;
-            default:
-                throw new Error("Invalid option selected");
-        }
-    } catch (error) {
-        console.error("Error handling post-commit action:", error.message);
     }
 }
 
