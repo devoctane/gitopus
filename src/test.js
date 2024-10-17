@@ -12,7 +12,6 @@ const genAI = new GoogleGenerativeAI("AIzaSyDarxCSPMYCLve3l-m8nMF7bMqnFqk2tW4");
  * Gets the current git changes (diff) to analyze
  */
 
-// added this as a comment
 async function getGitDiff() {
     try {
         return new Promise((resolve, reject) => {
@@ -265,11 +264,16 @@ async function main() {
     }
 }
 
+const test = () => {
+    console.log("Testing");
+};
+
 /**
  * Handles post-commit actions like pushing, viewing status, or logs.
  */
 async function handlePostCommitAction(action) {
     try {
+        test();
         let command;
         switch (action) {
             case "push":
