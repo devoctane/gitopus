@@ -13,7 +13,7 @@ const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
 
 /**
  * Shows the initial menu with three options
- */
+*/
 async function showInitialMenu() {
     try {
         const { choice } = await inquirer.prompt({
