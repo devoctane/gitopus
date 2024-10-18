@@ -170,8 +170,7 @@ async function generateAICommitMessage(diff, genAI) {
         const prompt = `Generate a conventional commit message for this git diff. STRICT REQUIREMENTS:
             - Maximum ${MAX_COMMIT_LENGTH} characters total
             - Include type prefix (feat, fix, etc.)
-            - Be specific but concise
-            - Focus on the main change
+            - Be specific and concise reporting all the main changes
             Diff: ${diff}
             Return ONLY the commit message.`;
 
@@ -241,7 +240,7 @@ async function predictCommitMessage(diff, genAI) {
 
         return useMessage ? prediction : null;
     } catch (error) {
-        logger.warning("AI prediction failed, returning to main menu");
+        logger.warning("Commit message generation failed, returning to main menu");
         return null;
     }
 }
