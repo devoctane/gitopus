@@ -159,23 +159,43 @@ async function getGitDiff() {
 }
 
 /**
- * Generates AI-powered commit message
+ * Parses the numbered commit messages from AI response
+ * @param {string} text - Raw AI response text
+ * @returns {string[]} Array of commit messages
+ */
+function parseCommitMessages(text) {
+    return text
+        .split(/\d+\.\s+/)
+        .slice(1)
+        .map((msg) => msg.trim())
+        .filter((msg) => msg.length > 0);
+}
+
+/**
+ * Generates AI-powered commit messages
  * @param {string} diff - Git diff content
  * @param {GoogleGenerativeAI} genAI - AI instance
- * @returns {Promise<string>}
+ * @returns {Promise<string[]>}
  */
 async function generateAICommitMessage(diff, genAI) {
     try {
         const model = genAI.getGenerativeModel({ model: "gemini-pro" });
-        const prompt = `Generate a conventional commit message for this git diff. STRICT REQUIREMENTS:
-            - Maximum ${MAX_COMMIT_LENGTH} characters total
-            - Include type prefix (feat, fix, etc.)
-            - Be specific and concise reporting all the main changes
+        const prompt = `Generate a conventional commit message for this git diff. 
+            STRICT REQUIREMENTS:
+                - Maximum ${MAX_COMMIT_LENGTH} characters total
+                - Include type suitable prefix (feat, fix, etc.)
+                - Be specific and concise reporting all the main changes
+                - Return exactly 5 numbered options (1., 2., etc.)
+                - Each option on a new line
+                
             Diff: ${diff}
-            Return ONLY the commit message.`;
+            Return ONLY the numbered commit messages.`;
 
         const result = await model.generateContent(prompt);
-        return result.response.text().trim().slice(0, MAX_COMMIT_LENGTH);
+        const messages = parseCommitMessages(result.response.text());
+
+        // Filter out any messages that exceed length limit
+        return messages.filter((msg) => msg.length <= MAX_COMMIT_LENGTH);
     } catch (error) {
         throw new Error(`AI generation error: ${error.message}`);
     }
@@ -221,24 +241,68 @@ async function getManualCommitMessage() {
 }
 
 /**
- * Predicts commit message using AI
+ * Predicts commit message using AI and lets user select
  * @param {string} diff - Git diff content
  * @param {GoogleGenerativeAI} genAI - AI instance
  * @returns {Promise<string>}
  */
-
 async function predictCommitMessage(diff, genAI) {
     try {
-        const prediction = await generateAICommitMessage(diff, genAI);
+        const messages = await generateAICommitMessage(diff, genAI);
 
-        const { useMessage } = await inquirer.prompt({
-            type: "confirm",
-            name: "useMessage",
-            message: `AI suggests: "${prediction}"\n\nUse this message?`,
-            default: true,
+        if (!messages || messages.length === 0) {
+            logger.warning("No valid commit messages generated");
+            return null;
+        }
+
+        // Present messages as a list for selection
+        const { selectedMessage } = await inquirer.prompt({
+            type: "list",
+            name: "selectedMessage",
+            message: "Select a commit message:",
+            choices: [
+                ...messages.map((msg, index) => ({
+                    name: `${index + 1}. ${msg}`,
+                    value: msg,
+                })),
+                new inquirer.Separator(),
+                { name: "Return to menu", value: null },
+            ],
+            pageSize: 7, // Show all options plus separator and return option
         });
 
-        return useMessage ? prediction : null;
+        if (!selectedMessage) {
+            return null;
+        }
+
+        // Allow user to edit the selected message
+        const { editMessage } = await inquirer.prompt({
+            type: "confirm",
+            name: "editMessage",
+            message: "Would you like to edit this message?",
+            default: false,
+        });
+
+        if (editMessage) {
+            const { customMessage } = await inquirer.prompt({
+                type: "input",
+                name: "customMessage",
+                message: "Edit commit message:",
+                default: selectedMessage,
+                validate: (input) => {
+                    if (input.length < MIN_MESSAGE_LENGTH) {
+                        return `Message must be at least ${MIN_MESSAGE_LENGTH} characters.`;
+                    }
+                    if (input.length > MAX_COMMIT_LENGTH) {
+                        return `Message too long. Maximum ${MAX_COMMIT_LENGTH} characters allowed.`;
+                    }
+                    return true;
+                },
+            });
+            return customMessage;
+        }
+
+        return selectedMessage;
     } catch (error) {
         logger.warning("Commit message generation failed, returning to main menu");
         return null;
@@ -306,9 +370,7 @@ async function handlePostCommit() {
  */
 async function main() {
     try {
-        // Initialize AI with stored or new API key
         const genAI = await initializeAI();
-
         const diff = await getGitDiff();
 
         if (!diff) {
@@ -317,7 +379,6 @@ async function main() {
         }
 
         while (true) {
-            // Add loop to handle menu returns
             const choice = await showInitialMenu();
 
             if (choice === MENU_CHOICES.EXIT) {
@@ -330,7 +391,7 @@ async function main() {
             if (choice === MENU_CHOICES.GENERATE) {
                 commitMessage = await predictCommitMessage(diff, genAI);
                 if (!commitMessage) {
-                    continue; // Return to menu if AI generation fails or user rejects
+                    continue;
                 }
             } else {
                 commitMessage = await getManualCommitMessage();
@@ -344,14 +405,14 @@ async function main() {
             });
 
             if (!confirmCommit) {
-                continue; // Return to menu if user doesn't confirm
+                continue;
             }
 
             await executeGitCommand(`git commit -m "${commitMessage}"`);
             logger.success("Changes committed successfully!");
 
             await handlePostCommit();
-            return; // Exit after successful commit
+            return;
         }
     } catch (error) {
         logger.error(`Error: ${error.message}`);
