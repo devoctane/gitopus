@@ -1,5 +1,0 @@
-1. Rollback to previous commit
-     - Details about the previous commit
-     - Confirmation prompt
-
-2. Commit message generation using hugging face API
