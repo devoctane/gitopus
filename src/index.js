@@ -11,7 +11,7 @@ import path from "path";
 import os from "os";
 
 // Constants
-const MAX_COMMIT_LENGTH = 65;
+const MAX_COMMIT_LENGTH = 70;
 const MIN_MESSAGE_LENGTH = 10;
 const CONFIG_DIR = path.join(os.homedir(), ".gitcopus");
 const CONFIG_FILE = path.join(CONFIG_DIR, "config.json");

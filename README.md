@@ -102,7 +102,7 @@ Visit the [Gitopus GitHub repository](https://github.com/devoctane/gitopus) and 
 Clone the repository to your local machine using the following command:
 
 ```bash
-git clone https://github.com/YOUR_GITHUB_USERNAME/gitopus.git
+git clone https://github.com/devoctane/gitopus.git
 ```
 
 ### 3. Create a new branch
