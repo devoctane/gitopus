@@ -9,6 +9,7 @@ import dotenv from "dotenv";
 import fs from "fs/promises";
 import path from "path";
 import os from "os";
+import { log } from "console";
 
 // Constants
 const MAX_COMMIT_LENGTH = 70;
@@ -142,6 +143,7 @@ async function generateAICommitMessage(diff, genAI) {
         const model = genAI.getGenerativeModel({ model: "gemini-pro" });
         const prompt = `Generate a conventional commit message for this git diff. 
             STRICT REQUIREMENTS:
+                - Strictly evaluate the contents of the 'Diff' given below and return the results
                 - Maximum ${MAX_COMMIT_LENGTH} characters total
                 - Include type suitable short prefix in lowercase (feat, fix, refactor etc.)
                 - Be specific and concise reporting all the main changes
