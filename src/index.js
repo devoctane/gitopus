@@ -47,10 +47,6 @@ const POST_COMMIT_ACTIONS = {
     EXIT: "exit",
 };
 
-/**
- * Ensures the config directory exists
- * @returns {Promise<void>}
- */
 async function ensureConfigDir() {
     try {
         await fs.mkdir(CONFIG_DIR, { recursive: true });
@@ -59,10 +55,6 @@ async function ensureConfigDir() {
     }
 }
 
-/**
- * Reads the stored API key
- * @returns {Promise<string|null>}
- */
 async function readApiKey() {
     try {
         const config = await fs.readFile(CONFIG_FILE, "utf8");
@@ -72,11 +64,6 @@ async function readApiKey() {
     }
 }
 
-/**
- * Stores the API key
- * @param {string} apiKey
- * @returns {Promise<void>}
- */
 async function storeApiKey(apiKey) {
     try {
         await ensureConfigDir();
@@ -86,10 +73,6 @@ async function storeApiKey(apiKey) {
     }
 }
 
-/**
- * Prompts for API key
- * @returns {Promise<string>}
- */
 async function promptForApiKey() {
     const { apiKey } = await inquirer.prompt({
         type: "input",
@@ -105,10 +88,6 @@ async function promptForApiKey() {
     return apiKey.trim();
 }
 
-/**
- * Initializes the AI client
- * @returns {Promise<GoogleGenerativeAI>}
- */
 async function initializeAI() {
     let apiKey = await readApiKey();
 
@@ -123,10 +102,6 @@ async function initializeAI() {
     return new GoogleGenerativeAI(apiKey);
 }
 
-/**
- * Shows the initial menu with commit message options
- * @returns {Promise<string>}
- */
 async function showInitialMenu() {
     try {
         const { choice } = await inquirer.prompt({
@@ -145,10 +120,6 @@ async function showInitialMenu() {
     }
 }
 
-/**
- * Gets the current git diff for staged changes
- * @returns {Promise<string>}
- */
 async function getGitDiff() {
     try {
         const { stdout } = await exec("git diff --cached");
@@ -158,11 +129,6 @@ async function getGitDiff() {
     }
 }
 
-/**
- * Parses the numbered commit messages from AI response
- * @param {string} text - Raw AI response text
- * @returns {string[]} Array of commit messages
- */
 function parseCommitMessages(text) {
     return text
         .split(/\d+\.\s+/)
@@ -171,19 +137,13 @@ function parseCommitMessages(text) {
         .filter((msg) => msg.length > 0);
 }
 
-/**
- * Generates AI-powered commit messages
- * @param {string} diff - Git diff content
- * @param {GoogleGenerativeAI} genAI - AI instance
- * @returns {Promise<string[]>}
- */
 async function generateAICommitMessage(diff, genAI) {
     try {
         const model = genAI.getGenerativeModel({ model: "gemini-pro" });
         const prompt = `Generate a conventional commit message for this git diff. 
             STRICT REQUIREMENTS:
                 - Maximum ${MAX_COMMIT_LENGTH} characters total
-                - Include type suitable prefix (feat, fix, etc.)
+                - Include type suitable short prefix in lowercase (feat, fix, refactor etc.)
                 - Be specific and concise reporting all the main changes
                 - Return exactly 5 numbered options (1., 2., etc.)
                 - Each option on a new line
@@ -201,10 +161,6 @@ async function generateAICommitMessage(diff, genAI) {
     }
 }
 
-/**
- * Gets manual commit message from user
- * @returns {Promise<string>}
- */
 async function getManualCommitMessage() {
     try {
         const { prefix } = await inquirer.prompt({
@@ -240,12 +196,6 @@ async function getManualCommitMessage() {
     }
 }
 
-/**
- * Predicts commit message using AI and lets user select
- * @param {string} diff - Git diff content
- * @param {GoogleGenerativeAI} genAI - AI instance
- * @returns {Promise<string>}
- */
 async function predictCommitMessage(diff, genAI) {
     try {
         const messages = await generateAICommitMessage(diff, genAI);
@@ -309,11 +259,6 @@ async function predictCommitMessage(diff, genAI) {
     }
 }
 
-/**
- * Executes a git command
- * @param {string} command - Git command to execute
- * @returns {Promise<void>}
- */
 async function executeGitCommand(command) {
     try {
         const { stdout, stderr } = await exec(command);
@@ -324,10 +269,6 @@ async function executeGitCommand(command) {
     }
 }
 
-/**
- * Handles post-commit actions
- * @returns {Promise<void>}
- */
 async function handlePostCommit() {
     try {
         const { action } = await inquirer.prompt({
@@ -364,10 +305,6 @@ async function handlePostCommit() {
     }
 }
 
-/**
- * Main function
- * @returns {Promise<void>}
- */
 async function main() {
     try {
         const genAI = await initializeAI();
