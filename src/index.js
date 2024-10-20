@@ -141,29 +141,23 @@ function parseCommitMessages(text) {
 async function generateAICommitMessage(diff, genAI) {
     try {
         const model = genAI.getGenerativeModel({ model: "gemini-pro" });
-        const prompt = `Analyze git diff and generate commit message.
-Format: <type>[(scope)]: <description>
-Rules:
-- Type must be: feat|fix|docs|style|refactor|test|chore
-- Add scope if file/component clear from diff
-- Max ${MAX_COMMIT_LENGTH} chars
-- Description must be clear and specific
-- Focus on WHAT changed, not HOW
-- Use imperative mood (add/fix/update)
-
-Diff: ${diff}
-
-Return single most suitable commit message.`;
+        const prompt = `Generate a conventional commit message for this git diff. 
+            STRICT REQUIREMENTS:
+                - Strictly evaluate the contents of the 'Diff' given below and return the results
+                - Maximum ${MAX_COMMIT_LENGTH} characters total
+                - Include type suitable short prefix in lowercase (feat, fix, refactor etc.)
+                - Be specific and concise reporting all the main changes
+                - Return exactly 5 numbered options (1., 2., etc.)
+                - Each option on a new line
+                
+            Diff: ${diff}
+            Return ONLY the numbered commit messages.`;
 
         const result = await model.generateContent(prompt);
-        const message = result.response.text().trim();
+        const messages = parseCommitMessages(result.response.text());
 
-        // Validate message format and length
-        if (message.length <= MAX_COMMIT_LENGTH && /^(feat|fix|docs|style|refactor|test|chore)(\(.+\))?: .+/.test(message)) {
-            return [message];
-        }
-
-        return [];
+        // Filter out any messages that exceed length limit
+        return messages.filter((msg) => msg.length <= MAX_COMMIT_LENGTH);
     } catch (error) {
         throw new Error(`AI generation error: ${error.message}`);
     }

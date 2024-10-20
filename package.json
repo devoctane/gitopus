@@ -15,7 +15,8 @@
     "type": "module",
     "keywords": [
         "git commit",
-        "git utility tools"
+        "git utility tools",
+        "gitopus"
     ],
     "author": "Octane Innovations",
     "license": "ISC",

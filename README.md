@@ -2,11 +2,12 @@
 
 ![Gitopus Logo](https://octane-spaces.blr1.cdn.digitaloceanspaces.com/gitopus/images/gitopus.png)
 
-### **Gitopus** is an open-source command-line tool that simplifies your Git commit process by providing an interactive interface for selecting conventional commit prefixes.
+### **Gitopus** is an open-source command-line tool that simplifies your Git commit process by providing an interactive interface for selecting conventional commit prefixes with the help of AI.
 
 ## Features
 
 -   Interactive menu for selecting commit prefixes.
+-   Uses Gemini AI  for generating suitable commits.
 -   Prompts for detailed commit messages.
 -   Streamlined process for creating conventional commits.
 -   Enhances code clarity and collaboration within teams.
