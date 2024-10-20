@@ -1,6 +1,6 @@
 {
     "name": "gitopus",
-    "version": "2.0.2",
+    "version": "2.0.3",
     "main": "src/index.js",
     "scripts": {
         "dev": "node src/index.js",
@@ -20,7 +20,7 @@
     ],
     "author": "Octane Innovations",
     "license": "ISC",
-    "description": "A command-line tool that simplifies your Git commit process by providing an interactive interface for selecting conventional commit prefixes.",
+    "description": "A command-line tool that simplifies your Git commit process by providing an interactive interface for selecting conventional commit prefixes with the help of AI.",
     "repository": {
         "type": "git",
         "url": "https://github.com/devoctane/gitopus.git"
