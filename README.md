@@ -2,15 +2,16 @@
 
 ![Gitopus Logo](https://octane-spaces.blr1.cdn.digitaloceanspaces.com/gitopus/images/gitopus.png)
 
-### **Gitopus** is an open-source command-line tool that simplifies your Git commit process by providing an interactive interface for selecting conventional commit prefixes with the help of AI.
+### **Gitopus** is an open-source command-line tool that leverages Google's Gemini AI to help generate meaningful commit messages and streamline your Git workflow through an interactive interface.
 
 ## Features
 
--   Interactive menu for selecting commit prefixes.
--   Uses Gemini AI  for generating suitable commits.
--   Prompts for detailed commit messages.
--   Streamlined process for creating conventional commits.
--   Enhances code clarity and collaboration within teams.
+-   🤖 AI-powered commit message generation using Google's Gemini
+-   🎯 Interactive menu for choosing between AI-generated or manual commit messages
+-   📝 Conventional commit format support with predefined prefixes
+-   ⚡ Post-commit actions (push, status, log) for streamlined workflow
+-   ✨ Smart validation for commit message length and format
+-   🔄 Option to edit AI-generated messages before committing
 
 ## Installation
 
@@ -18,15 +19,56 @@ To install **gitopus**, you need to have Node.js and npm (Node Package Manager) 
 
 1. **Install Node.js**: If you haven't already, download and install Node.js from [nodejs.org](https://nodejs.org/).
 
-2. **Install gitopus globally**: Open your terminal or command prompt and run the following command:
-
+2. **Install gitopus globally**: Open your terminal or command prompt and run:
     ```bash
     npm install -g gitopus
     ```
 
+## Getting Started
+
+### Setting Up Your API Key
+
+1. **Get Your Gemini API Key**:
+
+    - Visit [Google AI Studio](https://makersuite.google.com/app/apikey)
+    - Sign in with your Google account
+    - Click on "Create API Key"
+    - Copy your new API key
+
+2. **First-Time Setup**:
+   When you first run Gitopus, it will automatically:
+    ```bash
+    gt
+    ```
+    You'll see:
+    ```
+    No API key found. Please enter your Gemini API key.
+    You can get an API key from: https://makersuite.google.com/app/apikey
+    ```
+3. **Enter Your API Key**:
+
+    - Paste your API key when prompted
+    - The key will be securely stored in `~/.gitopus/config.json`
+    - You won't need to enter it again on this machine
+
+4. **Verify Setup**:
+    - After entering your API key, you should see:
+    ```
+    API key stored successfully!
+    ```
+    - The tool will then proceed to the main menu
+
+### API Key Management
+
+-   **Location**: Your API key is stored in `~/.gitopus/config.json`
+-   **Update Key**: To update your API key, either:
+    -   Edit the config file directly
+    -   Delete the config file and run Gitopus again
+-   **Security**: Keep your API key secure and never share it
+
 ## Usage
 
-Once **gitopus** is installed, you can use it to create Git commit messages **after you have staged your changes with `git add`**:
+Once **gitopus** is installed and configured, follow these steps:
 
 1. Stage your changes in the Git repository:
 
@@ -34,7 +76,7 @@ Once **gitopus** is installed, you can use it to create Git commit messages **af
     git add .
     ```
 
-2. Run the `gitopus` command:
+2. Run the command:
 
     ```bash
     gitopus
@@ -52,103 +94,92 @@ Once **gitopus** is installed, you can use it to create Git commit messages **af
     gt
     ```
 
-3. You will see an interactive menu with available commit prefixes. Use the arrow keys to select a prefix and press Enter.
+3. Choose your preferred method:
+    - **Generate commit message**: AI will analyze your changes and suggest commit messages
+    - **Custom commit message**: Manually create a commit with conventional prefixes
+    - **Exit**: Cancel the commit process
 
-4. After selecting a prefix, enter your commit message when prompted.
+### AI-Generated Commits
 
-5. Your commit will be created using the selected prefix and message.
+When using the AI generation feature:
 
-## Example
+1. The tool analyzes your staged changes
+2. Presents 5 AI-generated commit message options
+3. Select your preferred message
+4. Optionally edit the selected message
+5. Confirm and create the commit
 
-Here's an example of how to use **gitopus**:
+### Manual Commits
 
-```bash
-cd /path/to/your/repo
-git add .       # Stage your changes first
-gt              # Run the gitopus command
-```
+For manual commit creation:
 
--   **Select a prefix**:
+1. Select a conventional commit prefix (feat, fix, docs, etc.)
+2. Enter your commit message
+3. Review and confirm the complete commit message
 
-    ```
-    Select the commit prefix:
-      feat: A new feature or functionality
-      fix: A bug fix
-      docs: Documentation-only changes
-      ...
-    ```
+### Post-Commit Actions
 
--   **Enter your commit message**:
+After committing, choose from:
 
-    ```
-    Enter the commit message: Add user registration page
-    ```
+-   Push changes to remote repository
+-   View git status
+-   View latest commit in log
+-   Exit the tool
 
-This will create a commit like:
+## Configuration
 
-```bash
-git commit -m "feat: Add user registration page"
-```
+Gitopus stores its configuration in `~/.gitopus/config.json`, including your API key. You can manually edit this file if needed.
+
+## Common Issues
+
+-   **No staged changes**: Ensure you've staged your changes with `git add`
+-   **API key issues**:
+    -   Make sure your API key is valid
+    -   Check if the config file exists at `~/.gitopus/config.json`
+    -   Try deleting the config file and entering the key again
+-   **Long commit messages**: Messages are limited to 70 characters for best practices
 
 ## Contributing
 
-We welcome contributions to **Gitopus**! If you'd like to contribute, follow the steps below:
+We welcome contributions to **Gitopus**! Here's how you can help:
 
-### 1. Fork the repository
-
-Visit the [Gitopus GitHub repository](https://github.com/devoctane/gitopus) and click the **Fork** button to create your own copy of the repository.
-
-### 2. Clone the forked repository
-
-Clone the repository to your local machine using the following command:
+### 1. Fork and Clone
 
 ```bash
 git clone https://github.com/devoctane/gitopus.git
+cd gitopus
 ```
 
-### 3. Create a new branch
-
-Create a new branch for your feature or bug fix:
+### 2. Install Dependencies
 
 ```bash
-git checkout -b feature-or-bug-fix-name
+npm install
 ```
 
-### 4. Make changes
+### 3. Make Changes
 
-Make your changes and ensure everything is working correctly.
-
-### 5. Commit your changes
-
-After making changes, commit them using **Gitopus**:
+Create a new branch and make your changes:
 
 ```bash
-git add .
-gt           # Run gitopus to commit with a prefix
+git checkout -b feature-name
 ```
 
-Alternatively, commit manually:
+### 4. Test
 
-```bash
-git commit -m "feat: Add feature or bug fix"
-```
+Ensure your changes work as expected and add tests if necessary.
 
-### 6. Push to your fork
+### 5. Submit PR
 
-Push your changes to your forked repository:
+1. Push your changes to your fork
+2. Create a Pull Request with a clear description of your changes
+3. Wait for review and address any feedback
 
-```bash
-git push origin feature-or-bug-fix-name
-```
+## License
 
-### 7. Submit a pull request
-
-Go to the original **Gitopus** repository and submit a pull request with a description of your changes.
+MIT License - see LICENSE file for details
 
 ---
 
-Thank you for contributing to **Gitopus**!
+Built with ❤️ by Team Octane
 
 For more information, check out the [Gitopus GitHub repository](https://github.com/devoctane/gitopus).
-
-Team Octane!
