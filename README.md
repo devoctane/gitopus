@@ -1,4 +1,4 @@
-# Gitopus
+# Gitopus v2.0.5 stable
 
 ![Gitopus Logo](https://octane-spaces.blr1.cdn.digitaloceanspaces.com/gitopus/images/gitopus.png)
 
