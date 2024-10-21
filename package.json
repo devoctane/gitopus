@@ -1,6 +1,6 @@
 {
     "name": "gitopus",
-    "version": "2.0.3",
+    "version": "2.0.4",
     "main": "src/index.js",
     "scripts": {
         "dev": "node src/index.js",
@@ -25,7 +25,7 @@
         "type": "git",
         "url": "https://github.com/devoctane/gitopus.git"
     },
-    "homepage": "https://github.com/devoctane/gitopus#readme",
+    "homepage": "https://www.devoctane.in/gitopus",
     "dependencies": {
         "@google/generative-ai": "^0.21.0",
         "dotenv": "^16.4.5",

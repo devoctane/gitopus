@@ -4,147 +4,216 @@ import inquirer from "inquirer";
 import { promisify } from "util";
 import { exec as execCallback } from "child_process";
 import { GoogleGenerativeAI } from "@google/generative-ai";
-import prefixes from "./data/prefixes.js";
 import dotenv from "dotenv";
 import fs from "fs/promises";
 import path from "path";
 import os from "os";
-import { log } from "console";
+import crypto from "crypto";
+import { existsSync } from "fs";
 
-// Constants
-const MAX_COMMIT_LENGTH = 70;
-const MIN_MESSAGE_LENGTH = 10;
-const CONFIG_DIR = path.join(os.homedir(), ".gitcopus");
-const CONFIG_FILE = path.join(CONFIG_DIR, "config.json");
+// Load environment variables
+dotenv.config();
+
+// Constants and Configurations
+const DEFAULT_CONFIG = {
+    maxCommitLength: 70,
+    minMessageLength: 10,
+    apiTimeout: 10000,
+    maxRetries: 3,
+    retryDelay: 1000,
+    configVersion: "1.0.0",
+};
+
 const COLORS = {
     SUCCESS: "\x1b[32m",
     WARNING: "\x1b[33m",
+    ERROR: "\x1b[31m",
     RESET: "\x1b[0m",
 };
 
-// Configuration
-dotenv.config();
+// Commit message prefixes
+const prefixes = [
+    { name: "feat", description: "A new feature" },
+    { name: "fix", description: "A bug fix" },
+    { name: "docs", description: "Documentation changes" },
+    { name: "style", description: "Code style changes (formatting, etc)" },
+    { name: "refactor", description: "Code refactoring" },
+    { name: "test", description: "Adding or updating tests" },
+    { name: "chore", description: "Maintenance tasks" },
+];
 
-// Utilities
+// Utility Functions
 const exec = promisify(execCallback);
 const logger = {
     success: (msg) => console.log(`${COLORS.SUCCESS}${msg}${COLORS.RESET}`),
     warning: (msg) => console.log(`${COLORS.WARNING}${msg}${COLORS.RESET}`),
-    error: (msg) => console.error(msg),
+    error: (msg) => console.error(`${COLORS.ERROR}${msg}${COLORS.RESET}`),
 };
 
-// Menu choices for the CLI
-const MENU_CHOICES = {
-    GENERATE: "generate",
-    MANUAL: "manual",
-    EXIT: "exit",
-};
-
-// Post-commit action choices
-const POST_COMMIT_ACTIONS = {
-    PUSH: "push",
-    STATUS: "status",
-    LOG: "log",
-    EXIT: "exit",
-};
-
-async function ensureConfigDir() {
-    try {
-        await fs.mkdir(CONFIG_DIR, { recursive: true });
-    } catch (error) {
-        throw new Error(`Failed to create config directory: ${error.message}`);
+// Custom Error Classes
+class GitError extends Error {
+    constructor(message) {
+        super(message);
+        this.name = "GitError";
     }
 }
 
-async function readApiKey() {
-    try {
-        const config = await fs.readFile(CONFIG_FILE, "utf8");
-        return JSON.parse(config).apiKey;
-    } catch (error) {
-        return null;
+class APIError extends Error {
+    constructor(message, isRateLimit = false) {
+        super(message);
+        this.name = "APIError";
+        this.isRateLimit = isRateLimit;
     }
 }
 
-async function storeApiKey(apiKey) {
-    try {
-        await ensureConfigDir();
-        await fs.writeFile(CONFIG_FILE, JSON.stringify({ apiKey }));
-    } catch (error) {
-        throw new Error(`Failed to store API key: ${error.message}`);
-    }
-}
+// Configuration Management
+class Config {
+    static CONFIG_DIR = path.join(os.homedir(), ".gitcopus");
+    static CONFIG_FILE = path.join(this.CONFIG_DIR, "config.json");
 
-async function promptForApiKey() {
-    const { apiKey } = await inquirer.prompt({
-        type: "input",
-        name: "apiKey",
-        message: "Please enter your Gemini API key:",
-        validate: (input) => {
-            if (!input.trim()) {
-                return "API key cannot be empty";
+    static getEncryptionKey() {
+        const baseKey = process.env.ENCRYPTION_KEY || "default-secure-key-123";
+        return crypto.createHash("sha256").update(baseKey).digest();
+    }
+
+    static encrypt(text) {
+        try {
+            const iv = crypto.randomBytes(16);
+            const key = this.getEncryptionKey();
+            const cipher = crypto.createCipheriv("aes-256-gcm", key, iv);
+
+            const encrypted = Buffer.concat([cipher.update(text, "utf8"), cipher.final()]);
+
+            const authTag = cipher.getAuthTag();
+
+            return Buffer.concat([iv, authTag, encrypted]).toString("base64");
+        } catch (error) {
+            throw new Error(`Encryption failed: ${error.message}`);
+        }
+    }
+
+    static decrypt(encryptedData) {
+        try {
+            const buffer = Buffer.from(encryptedData, "base64");
+
+            const iv = buffer.slice(0, 16);
+            const authTag = buffer.slice(16, 32);
+            const encrypted = buffer.slice(32);
+
+            const key = this.getEncryptionKey();
+            const decipher = crypto.createDecipheriv("aes-256-gcm", key, iv);
+            decipher.setAuthTag(authTag);
+
+            return decipher.update(encrypted) + decipher.final("utf8");
+        } catch (error) {
+            throw new Error(`Decryption failed: ${error.message}`);
+        }
+    }
+
+    static async load() {
+        try {
+            await fs.mkdir(this.CONFIG_DIR, { recursive: true });
+
+            if (!existsSync(this.CONFIG_FILE)) {
+                await fs.writeFile(this.CONFIG_FILE, JSON.stringify(DEFAULT_CONFIG));
+                return { ...DEFAULT_CONFIG };
             }
+
+            const config = JSON.parse(await fs.readFile(this.CONFIG_FILE, "utf8"));
+            return { ...DEFAULT_CONFIG, ...config };
+        } catch (error) {
+            throw new Error(`Configuration error: ${error.message}`);
+        }
+    }
+
+    static async save(config) {
+        try {
+            await fs.writeFile(this.CONFIG_FILE, JSON.stringify(config, null, 2));
+        } catch (error) {
+            throw new Error(`Failed to save configuration: ${error.message}`);
+        }
+    }
+}
+
+// Git Operations
+class GitOperations {
+    static async checkRepository() {
+        try {
+            await exec("git rev-parse --is-inside-work-tree");
             return true;
-        },
-    });
-    return apiKey.trim();
-}
-
-async function initializeAI() {
-    let apiKey = await readApiKey();
-
-    if (!apiKey) {
-        logger.warning("No API key found. Please enter your Gemini API key.");
-        logger.warning("You can get an API key from: https://makersuite.google.com/app/apikey");
-        apiKey = await promptForApiKey();
-        await storeApiKey(apiKey);
-        logger.success("API key stored successfully!");
+        } catch (error) {
+            throw new GitError("Not a git repository");
+        }
     }
 
-    return new GoogleGenerativeAI(apiKey);
-}
+    static async getDiff() {
+        try {
+            const { stdout } = await exec("git diff --cached");
+            if (!stdout.trim()) {
+                throw new GitError("No staged changes found");
+            }
+            return stdout;
+        } catch (error) {
+            if (error instanceof GitError) throw error;
+            throw new GitError(`Failed to get git diff: ${error.message}`);
+        }
+    }
 
-async function showInitialMenu() {
-    try {
-        const { choice } = await inquirer.prompt({
-            type: "list",
-            name: "choice",
-            message: "How would you like to create your commit message?",
-            choices: [
-                { name: "Generate commit message", value: MENU_CHOICES.GENERATE },
-                { name: "Custom commit message", value: MENU_CHOICES.MANUAL },
-                { name: "Exit", value: MENU_CHOICES.EXIT },
-            ],
-        });
-        return choice;
-    } catch (error) {
-        throw new Error(`Menu error: ${error.message}`);
+    static async commit(message) {
+        try {
+            await exec(`git commit -m "${message}"`);
+        } catch (error) {
+            throw new GitError(`Commit failed: ${error.message}`);
+        }
+    }
+
+    static async push() {
+        try {
+            await exec("git push");
+        } catch (error) {
+            throw new GitError(`Push failed: ${error.message}`);
+        }
     }
 }
 
-async function getGitDiff() {
-    try {
-        const { stdout } = await exec("git diff --cached");
-        return stdout;
-    } catch (error) {
-        throw new Error(`Git diff error: ${error.message}`);
+// AI Operations
+class AIOperations {
+    constructor(apiKey, config) {
+        this.genAI = new GoogleGenerativeAI(apiKey);
+        this.config = config;
     }
-}
 
-function parseCommitMessages(text) {
-    return text
-        .split(/\d+\.\s+/)
-        .slice(1)
-        .map((msg) => msg.trim())
-        .filter((msg) => msg.length > 0);
-}
+    async generateCommitMessage(diff) {
+        let attempts = 0;
+        while (attempts < this.config.maxRetries) {
+            try {
+                const model = this.genAI.getGenerativeModel({ model: "gemini-pro" });
+                const prompt = this._buildPrompt(diff);
 
-async function generateAICommitMessage(diff, genAI) {
-    try {
-        const model = genAI.getGenerativeModel({ model: "gemini-pro" });
-        const prompt = `Generate a conventional commit message for this git diff. 
+                const result = await Promise.race([
+                    model.generateContent(prompt),
+                    new Promise((_, reject) => setTimeout(() => reject(new Error("API Timeout")), this.config.apiTimeout)),
+                ]);
+
+                return this._parseMessages(result.response.text());
+            } catch (error) {
+                attempts++;
+                if (error.message.includes("quota")) {
+                    throw new APIError("API rate limit exceeded", true);
+                }
+                if (attempts === this.config.maxRetries) {
+                    throw new APIError(`AI generation failed after ${attempts} attempts: ${error.message}`);
+                }
+                await new Promise((resolve) => setTimeout(resolve, this.config.retryDelay));
+            }
+        }
+    }
+
+    _buildPrompt(diff) {
+        return `Generate a conventional commit message for this git diff. 
             STRICT REQUIREMENTS:
-                - Strictly evaluate the contents of the 'Diff' given below and return the results
-                - Maximum ${MAX_COMMIT_LENGTH} characters total
+                - Strictly evaluate the contents of the 'Diff' given below
+                - Maximum ${this.config.maxCommitLength} characters total
                 - Include type suitable short prefix in lowercase (feat, fix, refactor etc.)
                 - Be specific and concise reporting all the main changes
                 - Return exactly 5 numbered options (1., 2., etc.)
@@ -152,82 +221,188 @@ async function generateAICommitMessage(diff, genAI) {
                 
             Diff: ${diff}
             Return ONLY the numbered commit messages.`;
+    }
 
-        const result = await model.generateContent(prompt);
-        const messages = parseCommitMessages(result.response.text());
-
-        // Filter out any messages that exceed length limit
-        return messages.filter((msg) => msg.length <= MAX_COMMIT_LENGTH);
-    } catch (error) {
-        throw new Error(`AI generation error: ${error.message}`);
+    _parseMessages(text) {
+        return text
+            .split(/\d+\.\s+/)
+            .slice(1)
+            .map((msg) => msg.trim())
+            .filter((msg) => msg.length > 0 && msg.length <= this.config.maxCommitLength);
     }
 }
 
-async function getManualCommitMessage() {
-    try {
-        const { prefix } = await inquirer.prompt({
-            type: "list",
-            name: "prefix",
-            message: "Select commit type:",
-            choices: prefixes.map((p) => ({
-                name: `${p.name}: ${p.description}`,
-                value: p.name,
-            })),
-        });
+// Main Application
+class GitCopus {
+    constructor() {
+        this.config = null;
+        this.aiOps = null;
+    }
 
-        const remainingLength = MAX_COMMIT_LENGTH - (prefix.length + 2);
+    async initialize() {
+        try {
+            await GitOperations.checkRepository();
+            this.config = await Config.load();
 
-        const { message } = await inquirer.prompt({
+            const apiKey = await this._getApiKey();
+            this.aiOps = new AIOperations(apiKey, this.config);
+        } catch (error) {
+            if (error instanceof GitError) {
+                logger.error(error.message);
+                process.exit(1);
+            }
+            throw error;
+        }
+    }
+
+    async _getApiKey() {
+        try {
+            let apiKey = await this._readApiKey();
+            if (!apiKey) {
+                logger.warning("No API key found. Please enter your Gemini API key.");
+                logger.warning("Get an API key from: https://makersuite.google.com/app/apikey");
+                apiKey = await this._promptForApiKey();
+                await this._storeApiKey(apiKey);
+            }
+            return apiKey;
+        } catch (error) {
+            throw new Error(`API key operation failed: ${error.message}`);
+        }
+    }
+
+    async _promptForApiKey() {
+        const { apiKey } = await inquirer.prompt({
             type: "input",
-            name: "message",
-            message: `Enter commit message (max ${remainingLength} chars):`,
+            name: "apiKey",
+            message: "Please enter your Gemini API key:",
             validate: (input) => {
-                if (input.length < MIN_MESSAGE_LENGTH) {
-                    return `Message must be at least ${MIN_MESSAGE_LENGTH} characters.`;
-                }
-                if (input.length > remainingLength) {
-                    return `Message too long. Maximum ${remainingLength} characters allowed.`;
+                if (!input.trim()) {
+                    return "API key cannot be empty";
                 }
                 return true;
             },
         });
-
-        return `${prefix}: ${message}`;
-    } catch (error) {
-        throw new Error(`Manual commit error: ${error.message}`);
+        return apiKey.trim();
     }
-}
 
-async function predictCommitMessage(diff, genAI) {
-    try {
-        const messages = await generateAICommitMessage(diff, genAI);
-
-        if (!messages || messages.length === 0) {
-            logger.warning("No valid commit messages generated");
+    async _readApiKey() {
+        try {
+            const config = await Config.load();
+            return config.apiKey ? Config.decrypt(config.apiKey) : null;
+        } catch (error) {
+            logger.warning("Stored API key is invalid or corrupted. Please enter it again.");
             return null;
         }
+    }
 
-        // Present messages as a list for selection
-        const { selectedMessage } = await inquirer.prompt({
+    async _storeApiKey(apiKey) {
+        try {
+            const encrypted = Config.encrypt(apiKey);
+            const config = await Config.load();
+            config.apiKey = encrypted;
+            await Config.save(config);
+            logger.success("API key stored successfully!");
+        } catch (error) {
+            throw new Error(`Failed to store API key: ${error.message}`);
+        }
+    }
+
+    async _showMenu() {
+        const { choice } = await inquirer.prompt({
             type: "list",
-            name: "selectedMessage",
-            message: "Select a commit message:",
+            name: "choice",
+            message: "How would you like to create your commit message?",
             choices: [
-                ...messages.map((msg, index) => ({
-                    name: `${index + 1}. ${msg}`,
-                    value: msg,
-                })),
-                new inquirer.Separator(),
-                { name: "Return to menu", value: null },
+                { name: "Generate commit message", value: "generate" },
+                { name: "Custom commit message", value: "manual" },
+                { name: "Exit", value: "exit" },
             ],
-            pageSize: 7, // Show all options plus separator and return option
         });
+        return choice;
+    }
 
-        if (!selectedMessage) {
+    async _handleChoice(choice, diff) {
+        try {
+            if (choice === "generate") {
+                return await this._handleGenerateChoice(diff);
+            } else if (choice === "manual") {
+                return await this._handleManualChoice();
+            }
+            return null;
+        } catch (error) {
+            this._handleError(error);
             return null;
         }
+    }
 
-        // Allow user to edit the selected message
+    async _handleGenerateChoice(diff) {
+        try {
+            const messages = await this.aiOps.generateCommitMessage(diff);
+            if (!messages || messages.length === 0) {
+                logger.warning("No valid commit messages generated");
+                return null;
+            }
+
+            const { selectedMessage } = await inquirer.prompt({
+                type: "list",
+                name: "selectedMessage",
+                message: "Select a commit message:",
+                choices: [
+                    ...messages.map((msg, index) => ({
+                        name: `${index + 1}. ${msg}`,
+                        value: msg,
+                    })),
+                    new inquirer.Separator(),
+                    { name: "Return to menu", value: null },
+                ],
+                pageSize: 7,
+            });
+
+            if (!selectedMessage) return null;
+
+            return await this._editMessageIfRequested(selectedMessage);
+        } catch (error) {
+            this._handleError(error);
+            return null;
+        }
+    }
+
+    async _handleManualChoice() {
+        try {
+            const { prefix } = await inquirer.prompt({
+                type: "list",
+                name: "prefix",
+                message: "Select commit type:",
+                choices: prefixes.map((p) => ({
+                    name: `${p.name}: ${p.description}`,
+                    value: p.name,
+                })),
+            });
+
+            const remainingLength = this.config.maxCommitLength - (prefix.length + 2);
+            const { message } = await inquirer.prompt({
+                type: "input",
+                name: "message",
+                message: `Enter commit message (max ${remainingLength} chars):`,
+                validate: (input) => {
+                    if (input.length < this.config.minMessageLength) {
+                        return `Message must be at least ${this.config.minMessageLength} characters.`;
+                    }
+                    if (input.length > remainingLength) {
+                        return `Message too long. Maximum ${remainingLength} characters allowed.`;
+                    }
+                    return true;
+                },
+            });
+
+            return `${prefix}: ${message}`;
+        } catch (error) {
+            this._handleError(error);
+            return null;
+        }
+    }
+
+    async _editMessageIfRequested(message) {
         const { editMessage } = await inquirer.prompt({
             type: "confirm",
             name: "editMessage",
@@ -235,127 +410,114 @@ async function predictCommitMessage(diff, genAI) {
             default: false,
         });
 
-        if (editMessage) {
-            const { customMessage } = await inquirer.prompt({
-                type: "input",
-                name: "customMessage",
-                message: "Edit commit message:",
-                default: selectedMessage,
-                validate: (input) => {
-                    if (input.length < MIN_MESSAGE_LENGTH) {
-                        return `Message must be at least ${MIN_MESSAGE_LENGTH} characters.`;
-                    }
-                    if (input.length > MAX_COMMIT_LENGTH) {
-                        return `Message too long. Maximum ${MAX_COMMIT_LENGTH} characters allowed.`;
-                    }
-                    return true;
-                },
-            });
-            return customMessage;
-        }
+        if (!editMessage) return message;
 
-        return selectedMessage;
-    } catch (error) {
-        logger.warning("Commit message generation failed, returning to main menu");
-        return null;
-    }
-}
-
-async function executeGitCommand(command) {
-    try {
-        const { stdout, stderr } = await exec(command);
-        if (stderr) logger.warning(stderr);
-        if (stdout) logger.success(stdout);
-    } catch (error) {
-        throw new Error(`Git command error: ${error.message}`);
-    }
-}
-
-async function handlePostCommit() {
-    try {
-        const { action } = await inquirer.prompt({
-            type: "list",
-            name: "action",
-            message: "What would you like to do next?",
-            choices: [
-                { name: "Push changes", value: POST_COMMIT_ACTIONS.PUSH },
-                { name: "View status", value: POST_COMMIT_ACTIONS.STATUS },
-                { name: "View log", value: POST_COMMIT_ACTIONS.LOG },
-                { name: "Exit", value: POST_COMMIT_ACTIONS.EXIT },
-            ],
+        const { customMessage } = await inquirer.prompt({
+            type: "input",
+            name: "customMessage",
+            message: "Edit commit message:",
+            default: message,
+            validate: (input) => {
+                if (input.length < this.config.minMessageLength) {
+                    return `Message must be at least ${this.config.minMessageLength} characters.`;
+                }
+                if (input.length > this.config.maxCommitLength) {
+                    return `Message too long. Maximum ${this.config.maxCommitLength} characters allowed.`;
+                }
+                return true;
+            },
         });
 
-        switch (action) {
-            case POST_COMMIT_ACTIONS.PUSH:
-                await executeGitCommand("git push");
-                logger.success("Changes pushed successfully!");
-                break;
-            case POST_COMMIT_ACTIONS.STATUS:
-                await executeGitCommand("git status");
-                await handlePostCommit();
-                break;
-            case POST_COMMIT_ACTIONS.LOG:
-                await executeGitCommand("git log -1");
-                await handlePostCommit();
-                break;
-            case POST_COMMIT_ACTIONS.EXIT:
-                logger.warning("Process terminated!");
-                break;
-        }
-    } catch (error) {
-        throw new Error(`Post-commit error: ${error.message}`);
+        return customMessage;
     }
-}
 
-async function main() {
-    try {
-        const genAI = await initializeAI();
-        const diff = await getGitDiff();
+    async _confirmCommit(message) {
+        const { confirmCommit } = await inquirer.prompt({
+            type: "confirm",
+            name: "confirmCommit",
+            message: `Commit with message: "${message}"?`,
+            default: true,
+        });
+        return confirmCommit;
+    }
 
-        if (!diff) {
-            logger.warning("No staged changes found. Stage changes with 'git add'");
-            return;
-        }
-
-        while (true) {
-            const choice = await showInitialMenu();
-
-            if (choice === MENU_CHOICES.EXIT) {
-                logger.warning("Process terminated!");
-                return;
-            }
-
-            let commitMessage = null;
-
-            if (choice === MENU_CHOICES.GENERATE) {
-                commitMessage = await predictCommitMessage(diff, genAI);
-                if (!commitMessage) {
-                    continue;
-                }
-            } else {
-                commitMessage = await getManualCommitMessage();
-            }
-
-            const { confirmCommit } = await inquirer.prompt({
-                type: "confirm",
-                name: "confirmCommit",
-                message: `Commit with message: "${commitMessage}"?`,
-                default: true,
+    async _handlePostCommit() {
+        try {
+            const { action } = await inquirer.prompt({
+                type: "list",
+                name: "action",
+                message: "What would you like to do next?",
+                choices: [
+                    { name: "Push changes", value: "push" },
+                    { name: "View status", value: "status" },
+                    { name: "View log", value: "log" },
+                    { name: "Exit", value: "exit" },
+                ],
             });
 
-            if (!confirmCommit) {
-                continue;
+            switch (action) {
+                case "push":
+                    await GitOperations.push();
+                    logger.success("Changes pushed successfully!");
+                    break;
+                case "status":
+                    const { stdout: status } = await exec("git status");
+                    console.log(status);
+                    await this._handlePostCommit();
+                    break;
+                case "log":
+                    const { stdout: log } = await exec("git log -1");
+                    console.log(log);
+                    await this._handlePostCommit();
+                    break;
+                case "exit":
+                    logger.warning("Process terminated!");
+                    break;
             }
-
-            await executeGitCommand(`git commit -m "${commitMessage}"`);
-            logger.success("Changes committed successfully!");
-
-            await handlePostCommit();
-            return;
+        } catch (error) {
+            this._handleError(error);
         }
-    } catch (error) {
-        logger.error(`Error: ${error.message}`);
-        process.exit(1);
+    }
+
+    _handleError(error) {
+        if (error instanceof GitError) {
+            logger.error(`Git Error: ${error.message}`);
+        } else if (error instanceof APIError) {
+            if (error.isRateLimit) {
+                logger.error("API rate limit exceeded. Please try again later.");
+            } else {
+                logger.error(`API Error: ${error.message}`);
+            }
+        } else {
+            logger.error(`Error: ${error.message}`);
+        }
+    }
+
+    async run() {
+        try {
+            await this.initialize();
+            const diff = await GitOperations.getDiff();
+
+            while (true) {
+                const choice = await this._showMenu();
+                if (choice === "exit") {
+                    logger.warning("Process terminated!");
+                    break;
+                }
+
+                const message = await this._handleChoice(choice, diff);
+                if (!message) continue;
+
+                if (await this._confirmCommit(message)) {
+                    await GitOperations.commit(message);
+                    logger.success("Changes committed successfully!");
+                    await this._handlePostCommit();
+                    break;
+                }
+            }
+        } catch (error) {
+            this._handleError(error);
+        }
     }
 }
 
@@ -365,4 +527,6 @@ process.on("unhandledRejection", (error) => {
     process.exit(1);
 });
 
-main();
+// Start the application
+const app = new GitCopus();
+app.run();
