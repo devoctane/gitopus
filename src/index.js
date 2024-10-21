@@ -68,7 +68,7 @@ class APIError extends Error {
 
 // Configuration Management
 class Config {
-    static CONFIG_DIR = path.join(os.homedir(), ".gitopus");
+    static CONFIG_DIR = path.join(os.homedir(), ".gitcopus");
     static CONFIG_FILE = path.join(this.CONFIG_DIR, "config.json");
 
     static getEncryptionKey() {
@@ -233,7 +233,7 @@ class AIOperations {
 }
 
 // Main Application
-class Gitopus {
+class GitCopus {
     constructor() {
         this.config = null;
         this.aiOps = null;
@@ -505,21 +505,8 @@ class Gitopus {
                     break;
                 }
 
-                let message;
-                while (!message) {
-                    message = await this._handleChoice(choice, diff);
-
-                    if (!message) {
-                        // Prompt user to retry or exit if no valid commit message is generated
-                        const retryChoice = await this._showRetryMenu(); // A new method to ask user to retry or exit
-                        if (retryChoice === "retry") {
-                            logger.info("Retrying to generate a valid commit message...");
-                        } else {
-                            logger.warning("Process terminated by user.");
-                            return;
-                        }
-                    }
-                }
+                const message = await this._handleChoice(choice, diff);
+                if (!message) continue;
 
                 if (await this._confirmCommit(message)) {
                     await GitOperations.commit(message);
@@ -532,24 +519,6 @@ class Gitopus {
             this._handleError(error);
         }
     }
-
-    async _showRetryMenu() {
-        const choices = [
-            { name: "Retry", value: "retry" },
-            { name: "Exit", value: "exit" },
-        ];
-
-        const answer = await inquirer.prompt([
-            {
-                type: "list",
-                name: "retryChoice",
-                message: "No valid commit message generated. Would you like to try again?",
-                choices: choices,
-            },
-        ]);
-
-        return answer.retryChoice;
-    }
 }
 
 // Error handling for unhandled rejections
@@ -559,7 +528,5 @@ process.on("unhandledRejection", (error) => {
 });
 
 // Start the application
-const app = new Gitopus();
+const app = new GitCopus();
 app.run();
-
-// Thanks god it works :)
