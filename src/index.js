@@ -505,8 +505,21 @@ class Gitopus {
                     break;
                 }
 
-                const message = await this._handleChoice(choice, diff);
-                if (!message) continue;
+                let message;
+                while (!message) {
+                    message = await this._handleChoice(choice, diff);
+
+                    if (!message) {
+                        // Prompt user to retry or exit if no valid commit message is generated
+                        const retryChoice = await this._showRetryMenu(); // A new method to ask user to retry or exit
+                        if (retryChoice === "retry") {
+                            logger.info("Retrying to generate a valid commit message...");
+                        } else {
+                            logger.warning("Process terminated by user.");
+                            return;
+                        }
+                    }
+                }
 
                 if (await this._confirmCommit(message)) {
                     await GitOperations.commit(message);
@@ -518,6 +531,24 @@ class Gitopus {
         } catch (error) {
             this._handleError(error);
         }
+    }
+
+    async _showRetryMenu() {
+        const choices = [
+            { name: "Retry", value: "retry" },
+            { name: "Exit", value: "exit" },
+        ];
+
+        const answer = await inquirer.prompt([
+            {
+                type: "list",
+                name: "retryChoice",
+                message: "No valid commit message generated. Would you like to try again?",
+                choices: choices,
+            },
+        ]);
+
+        return answer.retryChoice;
     }
 }
 
