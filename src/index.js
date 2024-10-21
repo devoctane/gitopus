@@ -68,7 +68,7 @@ class APIError extends Error {
 
 // Configuration Management
 class Config {
-    static CONFIG_DIR = path.join(os.homedir(), ".gitcopus");
+    static CONFIG_DIR = path.join(os.homedir(), ".gitopus");
     static CONFIG_FILE = path.join(this.CONFIG_DIR, "config.json");
 
     static getEncryptionKey() {
@@ -233,7 +233,7 @@ class AIOperations {
 }
 
 // Main Application
-class GitCopus {
+class Gitopus {
     constructor() {
         this.config = null;
         this.aiOps = null;
@@ -528,5 +528,5 @@ process.on("unhandledRejection", (error) => {
 });
 
 // Start the application
-const app = new GitCopus();
+const app = new Gitopus();
 app.run();
