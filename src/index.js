@@ -150,6 +150,9 @@ class GitOperations {
     static async getDiff() {
         try {
             const { stdout } = await exec("git diff --cached");
+            console.log("=============================");
+            console.log("gitDiff", stdout);
+            console.log("=============================");
             if (!stdout.trim()) {
                 throw new GitError("No staged changes found");
             }
