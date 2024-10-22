@@ -150,9 +150,6 @@ class GitOperations {
     static async getDiff() {
         try {
             const { stdout } = await exec("git diff --cached");
-            console.log("=============================");
-            console.log("gitDiff", stdout);
-            console.log("=============================");
             if (!stdout.trim()) {
                 throw new GitError("No staged changes found");
             }
@@ -218,7 +215,7 @@ class AIOperations {
             STRICT REQUIREMENTS:
                 - Strictly evaluate the contents of the 'Diff' given below
                 - Maximum ${this.config.maxCommitLength} characters total
-                - Include type suitable short prefix in lowercase (feat, fix, refactor etc.)
+                - Include type suitable short prefix in lowercase (feat, fix, refactor, test,docs, style, chore etc.)
                 - Be specific and concise reporting all the main changes
                 - Return exactly 5 numbered options (1., 2., etc.)
                 - Each option on a new line
