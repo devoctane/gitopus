@@ -40,7 +40,6 @@ const prefixes = [
     { name: "refactor", description: "Code refactoring" },
     { name: "test", description: "Adding or updating tests" },
     { name: "chore", description: "Maintenance tasks" },
-    // { name: "exit", description: "" },
 ];
 
 // Utility Functions
