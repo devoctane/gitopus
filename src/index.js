@@ -12,12 +12,12 @@ import crypto from "crypto";
 import { existsSync } from "fs";
 
 // Load environment variables
-dotenv.config();
+console.log(os.homedir());
 
 // Constants and Configurations
 const DEFAULT_CONFIG = {
     maxCommitLength: 70,
-    minMessageLength: 10,
+    minMessageLength: 4,
     apiTimeout: 10000,
     maxRetries: 3,
     retryDelay: 1000,
