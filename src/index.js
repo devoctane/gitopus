@@ -40,6 +40,7 @@ const prefixes = [
     { name: "refactor", description: "Code refactoring" },
     { name: "test", description: "Adding or updating tests" },
     { name: "chore", description: "Maintenance tasks" },
+    // { name: "exit", description: "" },
 ];
 
 // Utility Functions
@@ -373,11 +374,20 @@ class Gitopus {
                 type: "list",
                 name: "prefix",
                 message: "Select commit type:",
-                choices: prefixes.map((p) => ({
-                    name: `${p.name}: ${p.description}`,
-                    value: p.name,
-                })),
+                choices: [
+                    ...prefixes.map((p) => ({
+                        name: `${p.name}: ${p.description}`,
+                        value: p.name,
+                    })),
+                    { name: "exit", value: "exit" },
+                    new inquirer.Separator(),
+                ],
             });
+
+            if (prefix === "exit") {
+                logger.warning("Process terminated!");
+                return null;
+            }
 
             const remainingLength = this.config.maxCommitLength - (prefix.length + 2);
             const { message } = await inquirer.prompt({
