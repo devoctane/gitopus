@@ -215,9 +215,7 @@ class AIOperations {
                 - Strictly evaluate the contents of the 'Diff' given below
                 - Maximum ${this.config.maxCommitLength} characters total
                 - Include type suitable short prefix in lowercase (feat, fix, refactor, test,docs, style, chore etc.)
-                - Be specific reporting all the main changes separated by commas
-                - Return exactly 5 numbered options (1., 2., etc.)
-                - Each option on a new line
+                - Return exactly 1 prompt reporting all the main changes separated by commas (1., 2., etc.)
                 
             Diff: ${diff}
             Return ONLY the numbered commit messages.`;
