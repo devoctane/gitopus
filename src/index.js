@@ -12,7 +12,7 @@ import crypto from "crypto";
 import { existsSync } from "fs";
 
 // Load environment variables
-dotenv.config()
+dotenv.config();
 
 // Constants and Configurations
 const DEFAULT_CONFIG = {
@@ -215,7 +215,9 @@ class AIOperations {
                 - Strictly evaluate the contents of the 'Diff' given below
                 - Maximum ${this.config.maxCommitLength} characters total
                 - Include type suitable short prefix in lowercase (feat, fix, refactor, test,docs, style, chore etc.)
-                - Return exactly 1 prompt reporting all the main changes separated by commas (1., 2., etc.)
+                - Be specific reporting all the main changes separated by commas
+                - Return exactly 5 numbered options (1., 2., etc.)
+                - Each option on a new line
                 
             Diff: ${diff}
             Return ONLY the numbered commit messages.`;
@@ -311,8 +313,8 @@ class Gitopus {
             name: "choice",
             message: "How would you like to create your commit message?",
             choices: [
-                { name: "Generate commit message", value: "generate" },
                 { name: "Custom commit message", value: "manual" },
+                { name: "Generate commit message", value: "generate" },
                 { name: "Exit", value: "exit" },
             ],
         });
