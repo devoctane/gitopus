@@ -1,24 +1,17 @@
 #!/usr/bin/env node
 
 import inquirer from "inquirer";
+import dotenv from "dotenv";
 import { promisify } from "util";
 import { exec as execCallback } from "child_process";
-import dotenv from "dotenv";
 import prefixes from "./data/prefixes.js";
-import { Config, COLORS } from "./config/config.js";
+import { Config } from "./config/config.js";
 import { APIError, GitError } from "./error/error.js";
 import AIOperations from "./services/CommitGen.js";
+import { logger } from "./utils/logger.js";
 
-// Load environment variables
 dotenv.config();
-
-// Utility Functions
 const exec = promisify(execCallback);
-const logger = {
-    success: (msg) => console.log(`${COLORS.SUCCESS}${msg}${COLORS.RESET}`),
-    warning: (msg) => console.log(`${COLORS.WARNING}${msg}${COLORS.RESET}`),
-    error: (msg) => console.error(`${COLORS.ERROR}${msg}${COLORS.RESET}`),
-};
 
 class GitOperations {
     static async checkRepository() {
