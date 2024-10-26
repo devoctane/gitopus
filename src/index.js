@@ -3,44 +3,14 @@
 import inquirer from "inquirer";
 import { promisify } from "util";
 import { exec as execCallback } from "child_process";
-import { GoogleGenerativeAI } from "@google/generative-ai";
 import dotenv from "dotenv";
-import fs from "fs/promises";
-import path from "path";
-import os from "os";
-import crypto from "crypto";
-import { existsSync } from "fs";
+import prefixes from "./data/prefixes.js";
+import { Config, COLORS } from "./config/config.js";
+import { APIError, GitError } from "./error/error.js";
+import AIOperations from "./services/CommitGen.js";
 
 // Load environment variables
 dotenv.config();
-
-// Constants and Configurations
-const DEFAULT_CONFIG = {
-    maxCommitLength: 70,
-    minMessageLength: 4,
-    apiTimeout: 10000,
-    maxRetries: 3,
-    retryDelay: 1000,
-    configVersion: "1.0.0",
-};
-
-const COLORS = {
-    SUCCESS: "\x1b[32m",
-    WARNING: "\x1b[33m",
-    ERROR: "\x1b[31m",
-    RESET: "\x1b[0m",
-};
-
-// Commit message prefixes
-const prefixes = [
-    { name: "feat", description: "A new feature" },
-    { name: "fix", description: "A bug fix" },
-    { name: "docs", description: "Documentation changes" },
-    { name: "style", description: "Code style changes (formatting, etc)" },
-    { name: "refactor", description: "Code refactoring" },
-    { name: "test", description: "Adding or updating tests" },
-    { name: "chore", description: "Maintenance tasks" },
-];
 
 // Utility Functions
 const exec = promisify(execCallback);
@@ -50,92 +20,6 @@ const logger = {
     error: (msg) => console.error(`${COLORS.ERROR}${msg}${COLORS.RESET}`),
 };
 
-// Custom Error Classes
-class GitError extends Error {
-    constructor(message) {
-        super(message);
-        this.name = "GitError";
-    }
-}
-
-class APIError extends Error {
-    constructor(message, isRateLimit = false) {
-        super(message);
-        this.name = "APIError";
-        this.isRateLimit = isRateLimit;
-    }
-}
-
-// Configuration Management
-class Config {
-    static CONFIG_DIR = path.join(os.homedir(), ".gitopus");
-    static CONFIG_FILE = path.join(this.CONFIG_DIR, "config.json");
-
-    static getEncryptionKey() {
-        const baseKey = process.env.ENCRYPTION_KEY || "default-secure-key-123";
-        return crypto.createHash("sha256").update(baseKey).digest();
-    }
-
-    static encrypt(text) {
-        try {
-            const iv = crypto.randomBytes(16);
-            const key = this.getEncryptionKey();
-            const cipher = crypto.createCipheriv("aes-256-gcm", key, iv);
-
-            const encrypted = Buffer.concat([cipher.update(text, "utf8"), cipher.final()]);
-
-            const authTag = cipher.getAuthTag();
-
-            return Buffer.concat([iv, authTag, encrypted]).toString("base64");
-        } catch (error) {
-            throw new Error(`Encryption failed: ${error.message}`);
-        }
-    }
-
-    static decrypt(encryptedData) {
-        try {
-            const buffer = Buffer.from(encryptedData, "base64");
-
-            const iv = buffer.slice(0, 16);
-            const authTag = buffer.slice(16, 32);
-            const encrypted = buffer.slice(32);
-
-            const key = this.getEncryptionKey();
-            const decipher = crypto.createDecipheriv("aes-256-gcm", key, iv);
-            decipher.setAuthTag(authTag);
-
-            return decipher.update(encrypted) + decipher.final("utf8");
-        } catch (error) {
-            throw new Error(`Decryption failed: ${error.message}`);
-        }
-    }
-
-    static async load() {
-        try {
-            await fs.mkdir(this.CONFIG_DIR, { recursive: true });
-
-            if (!existsSync(this.CONFIG_FILE)) {
-                await fs.writeFile(this.CONFIG_FILE, JSON.stringify(DEFAULT_CONFIG));
-                return { ...DEFAULT_CONFIG };
-            }
-
-            const config = JSON.parse(await fs.readFile(this.CONFIG_FILE, "utf8"));
-            return { ...DEFAULT_CONFIG, ...config };
-        } catch (error) {
-            throw new Error(`Configuration error: ${error.message}`);
-        }
-    }
-
-    static async save(config) {
-        try {
-            await fs.writeFile(this.CONFIG_FILE, JSON.stringify(config, null, 2));
-        } catch (error) {
-            throw new Error(`Failed to save configuration: ${error.message}`);
-        }
-    }
-}
-
-// Git Operations
 class GitOperations {
     static async checkRepository() {
         try {
@@ -173,62 +57,6 @@ class GitOperations {
         } catch (error) {
             throw new GitError(`Push failed: ${error.message}`);
         }
-    }
-}
-
-// AI Operations
-class AIOperations {
-    constructor(apiKey, config) {
-        this.genAI = new GoogleGenerativeAI(apiKey);
-        this.config = config;
-    }
-
-    async generateCommitMessage(diff) {
-        let attempts = 0;
-        while (attempts < this.config.maxRetries) {
-            try {
-                const model = this.genAI.getGenerativeModel({ model: "gemini-pro" });
-                const prompt = this._buildPrompt(diff);
-
-                const result = await Promise.race([
-                    model.generateContent(prompt),
-                    new Promise((_, reject) => setTimeout(() => reject(new Error("API Timeout")), this.config.apiTimeout)),
-                ]);
-
-                return this._parseMessages(result.response.text());
-            } catch (error) {
-                attempts++;
-                if (error.message.includes("quota")) {
-                    throw new APIError("API rate limit exceeded", true);
-                }
-                if (attempts === this.config.maxRetries) {
-                    throw new APIError(`AI generation failed after ${attempts} attempts: ${error.message}`);
-                }
-                await new Promise((resolve) => setTimeout(resolve, this.config.retryDelay));
-            }
-        }
-    }
-
-    _buildPrompt(diff) {
-        return `Generate a conventional commit message for this git diff. 
-            STRICT REQUIREMENTS:
-                - Strictly evaluate the contents of the 'Diff' given below
-                - Maximum ${this.config.maxCommitLength} characters total
-                - Include type suitable short prefix in lowercase (feat, fix, refactor, test,docs, style, chore etc.)
-                - Be specific reporting all the main changes separated by commas
-                - Return exactly 5 numbered options (1., 2., etc.)
-                - Each option on a new line
-                
-            Diff: ${diff}
-            Return ONLY the numbered commit messages.`;
-    }
-
-    _parseMessages(text) {
-        return text
-            .split(/\d+\.\s+/)
-            .slice(1)
-            .map((msg) => msg.trim())
-            .filter((msg) => msg.length > 0 && msg.length <= this.config.maxCommitLength);
     }
 }
 
